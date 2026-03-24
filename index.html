@@ -1,0 +1,665 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>JOANNE — Health Log</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Noto+Sans+KR:wght@300;400;500;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f5f0eb;--black:#111111;--white:#ffffff;--pink:#ff6b8a;--pink-light:#ffd6de;--mint:#00c2a8;--mint-light:#d4f5f0;--yellow:#ffe566;--yellow-light:#fff9d6;--purple:#7c4dff;--purple-light:#e8e0ff;--warm:#ff9a5c;--card-bg:#ffffff;--border:#e8e0d8;--text:#111111;--muted:#888880;--surface:#faf6f2;}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;}
+.site-header{background:var(--black);padding:0 40px;display:flex;align-items:center;justify-content:space-between;height:60px;position:sticky;top:0;z-index:100;}
+.logo{font-family:'Bebas Neue',cursive;font-size:28px;letter-spacing:4px;color:var(--white);}
+.logo span{color:var(--pink);}
+.nav-links{display:flex;gap:4px;}
+.nav-link{font-size:11px;padding:6px 14px;border-radius:100px;color:rgba(255,255,255,0.5);cursor:pointer;transition:all 0.2s;letter-spacing:1px;}
+.nav-link:hover{background:var(--pink);color:var(--white);}
+.nav-tag{font-size:10px;letter-spacing:2px;padding:4px 12px;border:1px solid rgba(255,255,255,0.2);border-radius:100px;color:rgba(255,255,255,0.6);font-family:'DM Mono',monospace;}
+.hero{background:var(--black);color:var(--white);padding:60px 40px 80px;position:relative;overflow:hidden;}
+.hero::before{content:'HEALTH';font-family:'Bebas Neue',cursive;font-size:220px;position:absolute;right:-20px;bottom:-40px;opacity:0.04;letter-spacing:-10px;line-height:1;pointer-events:none;}
+.hero-grid{display:grid;grid-template-columns:1fr 1fr;gap:60px;max-width:1100px;margin:0 auto;align-items:center;}
+.hero-title{font-family:'Bebas Neue',cursive;font-size:88px;line-height:0.95;letter-spacing:2px;margin-bottom:20px;}
+.h1c{color:var(--pink);}.h2c{color:var(--yellow);}
+.hero-sub{font-size:13px;color:rgba(255,255,255,0.5);font-weight:300;letter-spacing:1px;line-height:1.8;margin-bottom:32px;}
+.hero-stats{display:flex;gap:24px;flex-wrap:wrap;}
+.hero-stat{background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:16px;padding:16px 20px;min-width:110px;}
+.hero-stat-val{font-family:'Bebas Neue',cursive;font-size:36px;line-height:1;margin-bottom:4px;}
+.hpink{color:var(--pink);}.hyellow{color:var(--yellow);}.hmint{color:var(--mint);}
+.hero-stat-label{font-size:10px;color:rgba(255,255,255,0.4);letter-spacing:2px;}
+.weight-visual{background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:24px;padding:32px;}
+.weight-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:28px;}
+.weight-label{font-size:11px;color:rgba(255,255,255,0.4);letter-spacing:2px;}
+.ring-wrap{position:relative;width:140px;height:140px;margin:0 auto 24px;}
+svg.ring{width:140px;height:140px;transform:rotate(-90deg);}
+.ring-bg{fill:none;stroke:rgba(255,255,255,0.06);stroke-width:12;}
+.ring-fill{fill:none;stroke:var(--pink);stroke-width:12;stroke-linecap:round;stroke-dasharray:352;stroke-dashoffset:299;}
+.ring-text{position:absolute;width:140px;height:140px;display:flex;flex-direction:column;align-items:center;justify-content:center;top:0;left:0;}
+.ring-cv{font-family:'Bebas Neue';font-size:32px;color:var(--white);line-height:1;}
+.ring-cs{font-size:10px;color:rgba(255,255,255,0.4);letter-spacing:1px;}
+.weight-row{display:flex;justify-content:space-between;}
+.w-item{text-align:center;}
+.w-val{font-family:'Bebas Neue';font-size:28px;}
+.w-val.current{color:var(--pink);}.w-val.target{color:var(--mint);}
+.w-sub{font-size:10px;color:rgba(255,255,255,0.4);letter-spacing:1px;}
+.calc-section{max-width:1100px;margin:-30px auto 0;padding:0 40px;position:relative;z-index:10;}
+.calc-card{background:var(--white);border-radius:28px;padding:36px 40px;box-shadow:0 20px 60px rgba(0,0,0,0.12);border:2px solid var(--black);}
+.calc-label{font-size:11px;letter-spacing:3px;font-weight:700;color:var(--pink);margin-bottom:8px;}
+.calc-title{font-family:'Bebas Neue',cursive;font-size:38px;letter-spacing:2px;color:var(--black);margin-bottom:24px;line-height:1;}
+.calc-title span{color:var(--pink);}
+.calc-input-row{display:flex;gap:12px;align-items:center;margin-bottom:16px;}
+.calc-input{flex:1;border:2px solid var(--black);border-radius:100px;padding:14px 24px;font-size:15px;font-family:'Noto Sans KR',sans-serif;background:var(--surface);outline:none;transition:border-color 0.2s,box-shadow 0.2s;}
+.calc-input:focus{border-color:var(--pink);box-shadow:0 0 0 4px var(--pink-light);}
+.calc-btn{background:var(--black);color:var(--white);border:none;border-radius:100px;padding:14px 28px;font-family:'Noto Sans KR',sans-serif;font-size:14px;font-weight:700;cursor:pointer;white-space:nowrap;transition:background 0.2s,transform 0.1s;letter-spacing:1px;}
+.calc-btn:hover{background:var(--pink);transform:scale(1.02);}
+.calc-chips{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;}
+.chip{border:1px solid var(--border);border-radius:100px;padding:6px 14px;font-size:12px;cursor:pointer;background:var(--surface);transition:all 0.15s;color:var(--muted);}
+.chip:hover{background:var(--pink-light);border-color:var(--pink);color:var(--pink);}
+.search-dropdown{display:none;background:var(--white);border:2px solid var(--black);border-radius:16px;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,0.1);max-height:320px;overflow-y:auto;}
+.search-dropdown.show{display:block;animation:fadeUp 0.2s ease;}
+.search-item{padding:14px 20px;cursor:pointer;border-bottom:1px solid var(--border);transition:background 0.15s;display:flex;justify-content:space-between;align-items:center;}
+.search-item:last-child{border-bottom:none;}
+.search-item:hover{background:var(--pink-light);}
+.search-item-name{font-size:14px;font-weight:500;}
+.search-item-right{display:flex;gap:16px;align-items:center;}
+.search-item-cal{font-family:'DM Mono';font-size:14px;color:var(--pink);font-weight:600;}
+.search-item-macros{font-size:11px;color:var(--muted);}
+.no-result{padding:20px;text-align:center;color:var(--muted);font-size:13px;}
+.calc-result{display:none;background:var(--surface);border-radius:20px;padding:24px 28px;border:1px solid var(--border);margin-top:12px;}
+.calc-result.show{display:block;animation:fadeUp 0.3s ease;}
+.calc-result-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px;}
+.calc-food-name{font-size:18px;font-weight:700;color:var(--black);}
+.calc-cal-badge{font-family:'Bebas Neue',cursive;font-size:42px;color:var(--pink);line-height:1;}
+.calc-cal-unit{font-size:13px;color:var(--muted);}
+.calc-macros{display:flex;gap:12px;flex-wrap:wrap;}
+.calc-macro{background:var(--white);border:1px solid var(--border);border-radius:12px;padding:10px 16px;text-align:center;min-width:90px;}
+.calc-macro-val{font-family:'DM Mono';font-size:18px;font-weight:500;margin-bottom:3px;}
+.calc-macro-val.carb{color:var(--warm);}.calc-macro-val.protein{color:var(--mint);}.calc-macro-val.fat{color:var(--purple);}
+.calc-macro-label{font-size:10px;color:var(--muted);letter-spacing:1px;}
+.calc-note{font-size:12px;color:var(--muted);margin-top:12px;line-height:1.6;}
+.ai-add-btn{margin-top:12px;background:var(--purple-light);color:var(--purple);border:none;border-radius:10px;padding:10px 18px;font-size:12px;font-weight:700;cursor:pointer;transition:all 0.2s;}
+.ai-add-btn:hover{background:var(--purple);color:var(--white);}
+.main{max-width:1100px;margin:0 auto;padding:48px 40px;}
+.section-header{display:flex;align-items:baseline;gap:12px;margin-bottom:24px;}
+.section-title-big{font-family:'Bebas Neue',cursive;font-size:40px;letter-spacing:2px;color:var(--black);}
+.section-badge{font-size:11px;letter-spacing:2px;color:var(--muted);font-weight:500;}
+.chart-card{background:var(--card-bg);border-radius:24px;padding:32px;border:1px solid var(--border);margin-bottom:48px;}
+.chart-tabs{display:flex;gap:8px;margin-bottom:24px;}
+.chart-tab{padding:8px 20px;border-radius:100px;font-size:12px;font-weight:700;letter-spacing:1px;cursor:pointer;border:1px solid var(--border);background:var(--surface);color:var(--muted);transition:all 0.2s;}
+.chart-tab.active{background:var(--black);color:var(--white);border-color:var(--black);}
+.chart-panel{display:none;}.chart-panel.active{display:block;}
+.chart-bar-area{display:flex;gap:6px;align-items:flex-end;height:180px;padding-bottom:36px;position:relative;margin-bottom:12px;}
+.chart-bar-area::after{content:'';position:absolute;bottom:36px;left:0;right:0;height:1px;background:var(--border);}
+.chart-col{flex:1;display:flex;flex-direction:column;align-items:center;}
+.chart-bar-pair{width:100%;display:flex;gap:2px;align-items:flex-end;}
+.chart-bar{flex:1;border-radius:6px 6px 0 0;min-height:4px;cursor:pointer;}
+.chart-bar:hover{opacity:0.75;}
+.chart-bar.intake{background:linear-gradient(to top,var(--pink),#ff9ab0);}
+.chart-bar.deficit{background:linear-gradient(to top,var(--mint),#6ae8d8);}
+.chart-date{font-size:10px;color:var(--muted);margin-top:8px;font-family:'DM Mono';}
+.chart-legend{display:flex;gap:20px;justify-content:flex-end;}
+.legend-item{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);}
+.legend-dot{width:10px;height:10px;border-radius:3px;}
+.line-wrap{overflow:visible;}
+.line-chart-svg{width:100%;height:200px;overflow:visible;}
+.line-labels{display:flex;justify-content:space-between;margin-top:8px;}
+.line-label{font-size:10px;color:var(--muted);font-family:'DM Mono';text-align:center;flex:1;}
+.cumul-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:20px;}
+.cumul-stat{background:var(--surface);border-radius:14px;padding:16px;text-align:center;border:1px solid var(--border);}
+.cumul-stat-val{font-family:'Bebas Neue';font-size:28px;line-height:1;margin-bottom:4px;}
+.cumul-stat-label{font-size:10px;color:var(--muted);letter-spacing:1px;}
+.logger-card{background:var(--card-bg);border-radius:24px;border:2px solid var(--black);overflow:hidden;margin-bottom:48px;}
+.logger-header{background:var(--black);padding:24px 32px;display:flex;justify-content:space-between;align-items:center;}
+.logger-header h3{font-family:'Bebas Neue';font-size:32px;letter-spacing:2px;color:var(--white);}
+.logger-header p{font-size:12px;color:rgba(255,255,255,0.4);letter-spacing:1px;margin-top:2px;}
+.date-input{background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);border-radius:10px;color:var(--white);padding:8px 14px;font-family:'DM Mono';font-size:13px;outline:none;cursor:pointer;}
+.date-input::-webkit-calendar-picker-indicator{filter:invert(1);cursor:pointer;}
+.logger-body{padding:28px 32px;}
+.logger-summary{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:24px;}
+.lsum{background:var(--surface);border-radius:14px;padding:14px 16px;text-align:center;border:1px solid var(--border);}
+.lsum-val{font-family:'Bebas Neue';font-size:26px;line-height:1;margin-bottom:4px;}
+.lsum-label{font-size:10px;color:var(--muted);letter-spacing:1px;}
+.progress-wrap{margin-bottom:24px;}
+.progress-label{display:flex;justify-content:space-between;font-size:12px;color:var(--muted);margin-bottom:6px;}
+.progress-track{height:10px;background:var(--surface);border-radius:10px;overflow:hidden;border:1px solid var(--border);}
+.progress-fill{height:100%;border-radius:10px;background:linear-gradient(to right,var(--mint),var(--pink));transition:width 0.4s ease;}
+.progress-fill.over{background:linear-gradient(to right,var(--pink),#cc0000);}
+.entry-row{display:flex;gap:10px;margin-bottom:14px;}
+.entry-input{flex:2;border:2px solid var(--border);border-radius:12px;padding:12px 16px;font-size:14px;font-family:'Noto Sans KR';background:var(--surface);outline:none;transition:border-color 0.2s;}
+.entry-input:focus{border-color:var(--pink);}
+.entry-cal{flex:0 0 90px;border:2px solid var(--border);border-radius:12px;padding:12px 16px;font-size:14px;font-family:'DM Mono';background:var(--surface);outline:none;text-align:center;transition:border-color 0.2s;}
+.entry-cal:focus{border-color:var(--pink);}
+.entry-ai{background:var(--purple-light);color:var(--purple);border:none;border-radius:12px;padding:12px 14px;font-size:12px;font-weight:700;cursor:pointer;transition:all 0.2s;white-space:nowrap;}
+.entry-ai:hover{background:var(--purple);color:var(--white);}
+.entry-add{background:var(--pink);color:var(--white);border:none;border-radius:12px;padding:12px 20px;font-size:14px;font-weight:700;cursor:pointer;transition:all 0.2s;}
+.entry-add:hover{background:#e05070;}
+.entry-add.mint{background:var(--mint);}.entry-add.mint:hover{background:#009985;}
+.log-list{list-style:none;max-height:280px;overflow-y:auto;margin-bottom:12px;}
+.log-list::-webkit-scrollbar{width:4px;}
+.log-list::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px;}
+.log-item{display:flex;justify-content:space-between;align-items:center;padding:10px 14px;border-radius:10px;margin-bottom:6px;background:var(--surface);border:1px solid var(--border);animation:fadeUp 0.2s ease;}
+.log-item.ex-item{background:var(--mint-light);border-color:rgba(0,194,168,0.2);}
+.log-name{font-size:13px;}
+.log-right{display:flex;align-items:center;gap:10px;}
+.log-cal{font-family:'DM Mono';font-size:13px;font-weight:500;}
+.log-cal.pc{color:var(--pink);}.log-cal.mc{color:var(--mint);}
+.del-btn{background:none;border:none;cursor:pointer;color:var(--muted);font-size:16px;padding:2px 6px;border-radius:6px;transition:all 0.15s;}
+.del-btn:hover{background:var(--pink-light);color:var(--pink);}
+.divider{height:1px;background:var(--border);margin:20px 0;}
+.sub-label{font-size:11px;letter-spacing:2px;color:var(--muted);font-weight:700;margin-bottom:12px;}
+.empty-msg{color:var(--muted);font-size:13px;text-align:center;padding:16px 0;}
+.save-row{display:flex;gap:12px;justify-content:flex-end;margin-top:20px;}
+.save-btn{background:var(--black);color:var(--white);border:none;border-radius:12px;padding:14px 28px;font-family:'Noto Sans KR';font-size:14px;font-weight:700;cursor:pointer;transition:all 0.2s;letter-spacing:1px;}
+.save-btn:hover{background:var(--pink);}
+.clear-btn{background:var(--surface);color:var(--muted);border:1px solid var(--border);border-radius:12px;padding:14px 28px;font-family:'Noto Sans KR';font-size:14px;cursor:pointer;transition:all 0.2s;}
+.clear-btn:hover{border-color:var(--pink);color:var(--pink);}
+.records-grid{display:flex;flex-direction:column;gap:12px;}
+.day-card{background:var(--card-bg);border-radius:20px;border:1px solid var(--border);overflow:hidden;transition:box-shadow 0.2s;}
+.day-card:hover{box-shadow:0 4px 20px rgba(0,0,0,0.06);}
+.day-header{display:grid;grid-template-columns:100px 1fr auto;align-items:center;padding:20px 24px;gap:20px;cursor:pointer;}
+.day-wd{font-size:10px;letter-spacing:2px;color:var(--pink);font-weight:700;margin-bottom:2px;}
+.day-dt{font-family:'Bebas Neue';font-size:28px;letter-spacing:1px;color:var(--black);}
+.day-pills{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
+.pill{display:flex;align-items:center;gap:6px;padding:8px 16px;border-radius:100px;font-size:12px;font-weight:600;}
+.pill.pp{background:var(--pink-light);color:#cc2250;}
+.pill.mp{background:var(--mint-light);color:#007a6a;}
+.pill.yp{background:var(--yellow-light);color:#8a6600;}
+.pill-v{font-family:'DM Mono';font-size:13px;}
+.day-chev{font-size:16px;color:var(--muted);transition:transform 0.3s;}
+.day-card.open .day-chev{transform:rotate(180deg);}
+.day-detail{display:none;padding:0 24px 24px;border-top:1px solid var(--border);}
+.day-card.open .day-detail{display:block;animation:fadeUp 0.2s ease;}
+.detail-cols{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-top:20px;}
+.detail-block h5{font-size:10px;letter-spacing:2px;color:var(--muted);font-weight:700;margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid var(--border);}
+.f-row{display:flex;justify-content:space-between;padding:7px 0;font-size:13px;border-bottom:1px solid rgba(0,0,0,0.04);}
+.f-row:last-child{border-bottom:none;}
+.f-n{color:var(--text);}.f-c{font-family:'DM Mono';color:var(--pink);font-size:12px;font-weight:500;}
+.e-row{display:flex;align-items:center;gap:10px;padding:7px 0;font-size:13px;border-bottom:1px solid rgba(0,0,0,0.04);}
+.e-row:last-child{border-bottom:none;}
+.e-dot{width:8px;height:8px;border-radius:50%;background:var(--mint);flex-shrink:0;}
+.e-cal{font-family:'DM Mono';color:var(--mint);font-size:12px;margin-left:auto;font-weight:500;}
+.macro-rows{margin-top:16px;}
+.macro-row-item{margin-bottom:10px;}
+.macro-top{display:flex;justify-content:space-between;font-size:12px;margin-bottom:5px;}
+.macro-n{color:var(--muted);}.macro-v{font-family:'DM Mono';font-weight:500;}
+.macro-track{height:7px;background:var(--surface);border-radius:10px;overflow:hidden;}
+.macro-fill{height:100%;border-radius:10px;}
+.mfc{background:var(--warm);}.mfp{background:var(--mint);}.mff{background:var(--purple);}
+.note-strip{margin-top:16px;padding:10px 16px;background:var(--pink-light);border-radius:10px;font-size:12px;color:#cc2250;border-left:3px solid var(--pink);}
+.toast{position:fixed;bottom:32px;right:32px;background:var(--black);color:var(--white);padding:14px 24px;border-radius:14px;font-size:13px;font-weight:600;z-index:999;transform:translateY(80px);opacity:0;transition:all 0.3s;box-shadow:0 8px 32px rgba(0,0,0,0.2);}
+.toast.show{transform:translateY(0);opacity:1;}
+.toast.ok{border-left:4px solid var(--mint);}
+@keyframes bounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
+@keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+@media(max-width:768px){
+  .hero-grid{grid-template-columns:1fr;gap:32px;}.hero-title{font-size:60px;}.hero::before{font-size:100px;}
+  .calc-section{padding:0 20px;}.calc-card{padding:24px 20px;}.main{padding:32px 20px;}.site-header{padding:0 20px;}
+  .day-header{grid-template-columns:80px 1fr auto;gap:10px;}.detail-cols{grid-template-columns:1fr;}
+  .hero{padding:40px 20px 60px;}.logger-summary,.cumul-stats{grid-template-columns:repeat(2,1fr);}
+  .logger-body{padding:20px;}.logger-header{padding:20px;flex-direction:column;gap:12px;align-items:flex-start;}
+  .entry-row{flex-wrap:wrap;}
+}
+</style>
+</head>
+<body>
+<header class="site-header">
+  <div class="logo">J<span>.</span>LOG</div>
+  <div style="display:flex;align-items:center;gap:16px">
+    <div class="nav-links">
+      <div class="nav-link" onclick="scrollTo({top:0,behavior:'smooth'})">概覽</div>
+      <div class="nav-link" onclick="document.getElementById('logger').scrollIntoView({behavior:'smooth'})">記錄</div>
+      <div class="nav-link" onclick="document.getElementById('records').scrollIntoView({behavior:'smooth'})">歷史</div>
+    </div>
+    <div class="nav-tag">70→60KG · 2026</div>
+  </div>
+</header>
+
+<section class="hero">
+  <div class="hero-grid">
+    <div>
+      <div class="hero-title"><div class="h1c">JOANNE</div><div>HEALTH<br><span class="h2c">JOURNEY</span></div></div>
+      <p class="hero-sub">減重目標 70 → 60 公斤<br>年底達標計畫 · 每日飲食 × 運動追蹤<br>體脂 35.4% · 內臟脂肪 9 · BMR 1411</p>
+      <div class="hero-stats">
+        <div class="hero-stat"><div class="hero-stat-val hpink">1300</div><div class="hero-stat-label">日攝取目標</div></div>
+        <div class="hero-stat"><div class="hero-stat-val hyellow">305</div><div class="hero-stat-label">平均日赤字</div></div>
+        <div class="hero-stat"><div class="hero-stat-val hmint">1.2<span style="font-size:20px">kg</span></div><div class="hero-stat-label">月減速度</div></div>
+      </div>
+    </div>
+    <div class="weight-visual">
+      <div class="weight-header"><div class="weight-label">WEIGHT PROGRESS</div><div class="weight-label">2026</div></div>
+      <div class="ring-wrap">
+        <svg class="ring" viewBox="0 0 120 120"><circle class="ring-bg" cx="60" cy="60" r="50"/><circle class="ring-fill" cx="60" cy="60" r="50"/></svg>
+        <div class="ring-text"><div class="ring-cv">15%</div><div class="ring-cs">達成率</div></div>
+      </div>
+      <div class="weight-row">
+        <div class="w-item"><div class="w-val current">70 <span style="font-size:14px;color:rgba(255,255,255,0.4)">kg</span></div><div class="w-sub">目前體重</div></div>
+        <div style="color:rgba(255,255,255,0.2);font-size:24px;align-self:center">→</div>
+        <div class="w-item"><div class="w-val target">60 <span style="font-size:14px;color:rgba(255,255,255,0.4)">kg</span></div><div class="w-sub">目標體重</div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="calc-section">
+  <div class="calc-card">
+    <div class="calc-label">✦ 內建食物資料庫 · 即時搜尋</div>
+    <div class="calc-title">熱量<span>查找器</span></div>
+    <div class="calc-chips">
+      <div class="chip" onclick="searchFood('路易莎莊園拿鐵')">路易莎拿鐵 M</div>
+      <div class="chip" onclick="searchFood('麻辣雞胸肉')">麻辣雞胸肉</div>
+      <div class="chip" onclick="searchFood('大溪黑豆干')">大溪豆乾</div>
+      <div class="chip" onclick="searchFood('氣炸牛排')">氣炸牛排</div>
+      <div class="chip" onclick="searchFood('彼得好拿鐵')">彼得好拿鐵</div>
+      <div class="chip" onclick="searchFood('水煮蛋')">水煮蛋</div>
+      <div class="chip" onclick="searchFood('甜不辣')">吉甜不辣</div>
+      <div class="chip" onclick="searchFood('高蛋白')">韓國高蛋白</div>
+    </div>
+    <div class="calc-input-row">
+      <input class="calc-input" id="foodInput" placeholder="搜尋食物名稱，例如：雞胸肉、拿鐵、牛排…" oninput="onSearchInput()" onkeydown="onSearchKey(event)"/>
+      <button class="calc-btn" onclick="doSearch()">查詢 →</button>
+    </div>
+    <div class="search-dropdown" id="searchDrop"></div>
+    <div class="calc-result" id="calcResult">
+      <div class="calc-result-header">
+        <div><div class="calc-food-name" id="resultName"></div><div class="calc-cal-unit">大卡 / 份</div></div>
+        <div><div class="calc-cal-badge" id="resultCal"></div></div>
+      </div>
+      <div class="calc-macros" id="resultMacros"></div>
+      <div class="calc-note" id="resultNote"></div>
+      <button class="ai-add-btn" onclick="addFromCalc()">＋ 加入今日記錄</button>
+    </div>
+  </div>
+</div>
+
+<div class="main">
+  <div class="section-header" style="margin-top:48px">
+    <div class="section-title-big">數據圖表</div>
+    <div class="section-badge">3/11 — 3/24</div>
+  </div>
+  <div class="chart-card">
+    <div class="chart-tabs">
+      <div class="chart-tab active" onclick="switchTab('daily',this)">📊 每日攝取 vs 赤字</div>
+      <div class="chart-tab" onclick="switchTab('cumul',this)">📈 累積赤字曲線</div>
+    </div>
+    <div class="chart-panel active" id="tab-daily">
+      <div class="chart-bar-area" id="chartArea"></div>
+      <div class="chart-legend">
+        <div class="legend-item"><div class="legend-dot" style="background:var(--pink)"></div>攝取熱量</div>
+        <div class="legend-item"><div class="legend-dot" style="background:var(--mint)"></div>熱量赤字</div>
+      </div>
+    </div>
+    <div class="chart-panel" id="tab-cumul">
+      <div class="line-wrap"><svg class="line-chart-svg" id="lineSvg" viewBox="0 0 800 200" preserveAspectRatio="none"></svg></div>
+      <div class="line-labels" id="lineLabels"></div>
+      <div class="cumul-stats">
+        <div class="cumul-stat"><div class="cumul-stat-val" style="color:var(--purple)" id="cTotal">0</div><div class="cumul-stat-label">累積赤字 (大卡)</div></div>
+        <div class="cumul-stat"><div class="cumul-stat-val" style="color:var(--pink)" id="cKg">0</div><div class="cumul-stat-label">預計減重 (公斤)</div></div>
+        <div class="cumul-stat"><div class="cumul-stat-val" style="color:var(--yellow)" id="cAvg">0</div><div class="cumul-stat-label">平均日赤字</div></div>
+        <div class="cumul-stat"><div class="cumul-stat-val" style="color:var(--mint)" id="cStreak">14</div><div class="cumul-stat-label">連續記錄天數</div></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="logger">
+    <div class="section-header">
+      <div class="section-title-big">今日記錄</div>
+      <div class="section-badge">手動輸入飲食 · 自動計算</div>
+    </div>
+    <div class="logger-card">
+      <div class="logger-header">
+        <div><h3>DAILY LOG</h3><p>記錄今天吃了什麼 · 自動計算熱量與赤字</p></div>
+        <input type="date" class="date-input" id="logDate" onchange="loadDayLog()"/>
+      </div>
+      <div class="logger-body">
+        <div class="logger-summary">
+          <div class="lsum"><div class="lsum-val hpink" id="sumI">0</div><div class="lsum-label">已攝取 (kcal)</div></div>
+          <div class="lsum"><div class="lsum-val hmint" id="sumR">1300</div><div class="lsum-label">剩餘額度</div></div>
+          <div class="lsum"><div class="lsum-val" style="color:var(--warm)" id="sumE">0</div><div class="lsum-label">運動消耗</div></div>
+          <div class="lsum"><div class="lsum-val" style="color:var(--purple)" id="sumD">0</div><div class="lsum-label">今日赤字</div></div>
+        </div>
+        <div class="progress-wrap">
+          <div class="progress-label"><span>攝取進度</span><span id="progText">0 / 1300 kcal</span></div>
+          <div class="progress-track"><div class="progress-fill" id="progBar" style="width:0%"></div></div>
+        </div>
+        <div class="sub-label">🍽 飲食記錄</div>
+        <div class="entry-row">
+          <input class="entry-input" id="fName" placeholder="食物名稱（輸入後可用AI查熱量）" onkeydown="if(event.key==='Enter')document.getElementById('fCal').focus()"/>
+          <input class="entry-cal" id="fCal" placeholder="大卡" type="number" min="0" onkeydown="if(event.key==='Enter')addFood()"/>
+          <button class="entry-ai" onclick="aiForFood()">🔍 查熱量</button>
+          <button class="entry-add" onclick="addFood()">＋ 加入</button>
+        </div>
+        <ul class="log-list" id="foodList"></ul>
+        <div class="empty-msg" id="foodEmpty">尚未記錄任何食物，開始輸入吧！</div>
+        <div class="divider"></div>
+        <div class="sub-label">💪 運動記錄</div>
+        <div class="entry-row">
+          <input class="entry-input" id="eName" placeholder="運動名稱（例如：爬坡 20分鐘）" onkeydown="if(event.key==='Enter')document.getElementById('eCal').focus()"/>
+          <input class="entry-cal" id="eCal" placeholder="消耗" type="number" min="0" onkeydown="if(event.key==='Enter')addEx()"/>
+          <button class="entry-add mint" onclick="addEx()">＋ 加入</button>
+        </div>
+        <ul class="log-list" id="exList"></ul>
+        <div class="empty-msg" id="exEmpty" style="display:none">尚未記錄運動</div>
+        <div class="save-row">
+          <button class="clear-btn" onclick="clearLog()">清除今日</button>
+          <button class="save-btn" onclick="saveLog()">💾 儲存記錄</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="records">
+    <div class="section-header">
+      <div class="section-title-big">每日記錄</div>
+      <div class="section-badge">點擊展開詳情</div>
+    </div>
+    <div class="records-grid" id="recordsGrid"></div>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+// ── FOOD DATABASE ──────────────────────────────────────────────────────────
+const FOOD_DB = [
+  {name:"路易莎莊園拿鐵 M杯",cal:109,carb:11,protein:3,fat:5,note:"路易莎官方數據"},
+  {name:"路易莎莊園拿鐵 L杯",cal:164,carb:16,protein:5,fat:7,note:"路易莎官方數據"},
+  {name:"彼得好拿鐵咖啡 L杯",cal:222,carb:18,protein:8,fat:12,note:"彼得好官方數據"},
+  {name:"彼得好輕拿鐵 L杯",cal:222,carb:18,protein:8,fat:12,note:"彼得好官方數據"},
+  {name:"彼得好燕麥拿鐵 L杯",cal:198,carb:20,protein:6,fat:9,note:"彼得好官方數據"},
+  {name:"彼得好黑糖拿鐵 L杯",cal:273,carb:32,protein:7,fat:11,note:"彼得好官方數據"},
+  {name:"彼得好特調咖啡 L杯",cal:301,carb:35,protein:6,fat:12,note:"彼得好官方數據"},
+  {name:"美式咖啡",cal:10,carb:0,protein:0,fat:0,note:"黑咖啡幾乎零熱量"},
+  {name:"摩斯拿鐵咖啡 M冰",cal:121,carb:9,protein:6,fat:7,note:"摩斯官方2026/3月更新"},
+  {name:"摩斯拿鐵咖啡 M熱",cal:129,carb:10,protein:6,fat:7,note:"摩斯官方2026/3月更新"},
+  {name:"摩斯雞肉三明治亞麻玄米吐司",cal:366,carb:36,protein:14,fat:18,note:"摩斯官方2026/3月更新"},
+  {name:"麻辣雞胸肉 105g",cal:115,carb:3,protein:22,fat:2,note:"麻辣調味雞胸肉"},
+  {name:"麻辣雞胸肉 121大卡",cal:121,carb:3,protein:23,fat:2,note:"較大份麻辣雞胸"},
+  {name:"7-11元氣雞胸肉 100g",cal:110,carb:1,protein:23,fat:1,note:"7-11便利商店"},
+  {name:"大溪黑豆干 100g",cal:135,carb:6,protein:13,fat:7,note:"大溪名產豆乾"},
+  {name:"大溪黑豆干 130g",cal:175,carb:8,protein:17,fat:9,note:"大溪名產豆乾"},
+  {name:"大溪黑豆干 150g",cal:202,carb:9,protein:20,fat:10,note:"大溪名產豆乾"},
+  {name:"水煮蛋 1顆",cal:70,carb:0,protein:7,fat:5,note:"標準水煮全蛋"},
+  {name:"水煮蛋 2顆",cal:140,carb:0,protein:14,fat:10,note:"標準水煮全蛋"},
+  {name:"氣炸牛排 100g",cal:150,carb:0,protein:23,fat:6,note:"氣炸無額外用油"},
+  {name:"氣炸牛排 130g",cal:195,carb:0,protein:30,fat:8,note:"氣炸無額外用油"},
+  {name:"烤鮭魚 100g",cal:145,carb:0,protein:20,fat:7,note:"烤鮭魚無調味"},
+  {name:"小碗甜不辣含沾醬",cal:452,carb:34,protein:29,fat:23,note:"吉甜不辣小碗含沾醬"},
+  {name:"全家香辣醬粉絲煲 170g",cal:162,carb:23,protein:5,fat:5,note:"全家便利商店官方數據"},
+  {name:"Flimeal草莓高蛋白",cal:147,carb:21,protein:19,fat:3,note:"韓國高蛋白飲品"},
+  {name:"Flimeal花生醬高蛋白",cal:179,carb:14,protein:24,fat:6,note:"韓國高蛋白飲品"},
+  {name:"Flimeal Brown 17穀物高蛋白",cal:166,carb:21,protein:20,fat:5,note:"韓國17穀物高蛋白"},
+  {name:"Flimeal巧克力高蛋白",cal:150,carb:16,protein:22,fat:3,note:"韓國高蛋白飲品"},
+  {name:"Flimeal黑芝麻高蛋白",cal:160,carb:19,protein:19,fat:4,note:"韓國高蛋白飲品"},
+  {name:"韓國高蛋白粉 148大卡",cal:148,carb:21,protein:19,fat:3,note:"45g沖泡式高蛋白"},
+  {name:"福樂超能蛋白牛乳草莓 375ml",cal:207,carb:28,protein:21,fat:1,note:"福樂官方標籤數據"},
+  {name:"Carman's黑巧克力蛋白棒 40g",cal:190,carb:16,protein:12,fat:10,note:"澳洲Carman's官方"},
+  {name:"少糖紅茶豆漿 500ml",cal:185,carb:20,protein:5,fat:5,note:"市售少糖豆漿"},
+  {name:"無糖豆漿 500ml",cal:100,carb:5,protein:8,fat:4,note:"無糖豆漿"},
+  {name:"白飯 120g",cal:170,carb:38,protein:3,fat:0,note:"一拳頭份量白飯"},
+  {name:"白飯 60g",cal:85,carb:19,protein:2,fat:0,note:"半拳頭份量白飯"},
+  {name:"青菜炒 100g",cal:50,carb:5,protein:2,fat:2,note:"炒青菜估算"},
+  {name:"清燙青菜 100g",cal:30,carb:4,protein:2,fat:0,note:"水煮無調味青菜"},
+  {name:"杏鮑菇氣炸 100g",cal:40,carb:7,protein:2,fat:1,note:"氣炸無額外用油"},
+  {name:"泡菜 50g",cal:20,carb:3,protein:1,fat:0,note:"韓式泡菜"},
+  {name:"小黃瓜",cal:25,carb:4,protein:1,fat:0,note:"一條小黃瓜"},
+  {name:"什錦滷味桶 750cc",cal:388,carb:52,protein:22,fat:9,note:"含豆乾甜不辣菇類"},
+  {name:"芋頭米粉湯 小碗",cal:180,carb:35,protein:4,fat:3,note:"台式米粉湯"},
+  {name:"韓式部隊鍋含年糕",cal:650,carb:70,protein:30,fat:25,note:"韓式部隊鍋"},
+  {name:"炒碼麵無牛肉",cal:420,carb:55,protein:15,fat:15,note:"炒碼麵"},
+  {name:"大心酸辣番茄豬肉麵",cal:632,carb:85,protein:28,fat:20,note:"大心Thai Town Noodle官方"},
+  {name:"椒香豆乳湯麵",cal:600,carb:64,protein:24,fat:16,note:"素食豆乳麵"},
+  {name:"merci小巧克力 1根",cal:38,carb:4,protein:0,fat:2,note:"德國merci巧克力"},
+  {name:"滷味蛋 30g",cal:85,carb:3,protein:6,fat:6,note:"滷蛋"},
+  {name:"茶葉蛋 1顆",cal:70,carb:1,protein:7,fat:5,note:"便利商店茶葉蛋"},
+  {name:"御料小館韓風炸雞 104g",cal:234,carb:23,protein:11,fat:11,note:"御料小館官方標籤"},
+  {name:"雪花餅 小塊",cal:25,carb:4,protein:0,fat:1,note:"小份量雪花餅"},
+  {name:"四海遊龍皮蛋豆腐",cal:120,carb:5,protein:8,fat:8,note:"四海遊龍估算"},
+  {name:"四海遊龍小黃瓜",cal:25,carb:4,protein:1,fat:0,note:"四海遊龍小黃瓜"},
+  {name:"希臘優格無糖 100g",cal:60,carb:4,protein:10,fat:1,note:"無糖希臘優格"},
+  {name:"鮪魚罐頭水煮 100g",cal:110,carb:0,protein:25,fat:1,note:"水煮鮪魚罐頭"},
+  {name:"蝦仁 100g",cal:90,carb:0,protein:20,fat:1,note:"新鮮蝦仁"},
+  {name:"爬坡跑步機 20分鐘",cal:140,carb:0,protein:0,fat:0,note:"跑步機爬坡消耗估算"},
+  {name:"爬坡跑步機 30分鐘",cal:200,carb:0,protein:0,fat:0,note:"跑步機爬坡消耗估算"},
+  {name:"橢圓機 20分鐘",cal:110,carb:0,protein:0,fat:0,note:"橢圓機消耗估算"},
+  {name:"重訓臀腿 60分鐘",cal:200,carb:0,protein:0,fat:0,note:"臀腿重訓消耗估算"},
+  {name:"重訓上半身 60分鐘",cal:180,carb:0,protein:0,fat:0,note:"上半身重訓消耗估算"},
+];
+
+function fuzzySearch(query) {
+  if (!query || query.length < 1) return [];
+  const q = query.toLowerCase();
+  const scored = FOOD_DB.map(f => {
+    const name = f.name.toLowerCase();
+    let score = 0;
+    if (name === q) score = 100;
+    else if (name.startsWith(q)) score = 80;
+    else if (name.includes(q)) score = 60;
+    else {
+      const words = q.split(/\s+/);
+      const matched = words.filter(w => w.length > 0 && name.includes(w));
+      if (matched.length > 0) score = 40 * (matched.length / words.length);
+    }
+    return { ...f, score };
+  }).filter(f => f.score > 0).sort((a, b) => b.score - a.score);
+  return scored.slice(0, 8);
+}
+
+function onSearchInput() {
+  const q = document.getElementById('foodInput').value.trim();
+  const drop = document.getElementById('searchDrop');
+  if (!q) { drop.classList.remove('show'); return; }
+  const results = fuzzySearch(q);
+  if (results.length === 0) {
+    drop.innerHTML = '<div class="no-result">找不到結果，請嘗試其他關鍵字</div>';
+  } else {
+    drop.innerHTML = results.map(f =>
+      `<div class="search-item" onclick="selectFood(${JSON.stringify(f).replace(/"/g,'&quot;')})">
+        <span class="search-item-name">${f.name}</span>
+        <div class="search-item-right">
+          <span class="search-item-macros">碳${f.carb}g 蛋${f.protein}g 脂${f.fat}g</span>
+          <span class="search-item-cal">${f.cal} kcal</span>
+        </div>
+      </div>`
+    ).join('');
+  }
+  drop.classList.add('show');
+}
+
+function onSearchKey(e) {
+  if (e.key === 'Enter') doSearch();
+  if (e.key === 'Escape') document.getElementById('searchDrop').classList.remove('show');
+}
+
+function doSearch() {
+  const q = document.getElementById('foodInput').value.trim();
+  if (!q) return;
+  const results = fuzzySearch(q);
+  if (results.length > 0) selectFood(results[0]);
+  else { toast('找不到「' + q + '」，請嘗試其他關鍵字'); }
+  document.getElementById('searchDrop').classList.remove('show');
+}
+
+function selectFood(f) {
+  document.getElementById('searchDrop').classList.remove('show');
+  document.getElementById('resultName').textContent = f.name;
+  document.getElementById('resultCal').textContent = f.cal;
+  document.getElementById('resultMacros').innerHTML =
+    `<div class="calc-macro"><div class="calc-macro-val carb">${f.carb}g</div><div class="calc-macro-label">碳水</div></div>
+     <div class="calc-macro"><div class="calc-macro-val protein">${f.protein}g</div><div class="calc-macro-label">蛋白質</div></div>
+     <div class="calc-macro"><div class="calc-macro-val fat">${f.fat}g</div><div class="calc-macro-label">脂肪</div></div>`;
+  document.getElementById('resultNote').textContent = f.note || '';
+  document.getElementById('calcResult').classList.add('show');
+}
+
+function searchFood(q) {
+  document.getElementById('foodInput').value = q;
+  doSearch();
+}
+
+document.addEventListener('click', e => {
+  if (!e.target.closest('.calc-input') && !e.target.closest('.search-dropdown'))
+    document.getElementById('searchDrop').classList.remove('show');
+});
+
+// ── LOGGER AI LOOKUP (from DB) ──
+function aiForFood() {
+  const n = document.getElementById('fName').value.trim();
+  if (!n) { toast('請先輸入食物名稱'); return; }
+  const results = fuzzySearch(n);
+  if (results.length > 0) {
+    document.getElementById('fCal').value = results[0].cal;
+    toast('✓ 找到：' + results[0].name + ' ' + results[0].cal + ' kcal', 'ok');
+  } else {
+    toast('找不到「' + n + '」，請手動輸入熱量');
+  }
+}
+
+// ── HISTORICAL DATA ─────────────────────────────────────────────────────────
+const histDays=[
+  {date:"3/11",wd:"週三",intake:1040,deficit:371,exercise:0,foods:[{n:"高蛋白粉",c:120},{n:"路易莎拿鐵 M",c:109},{n:"白飯 120g",c:170},{n:"爆汁豆乾 150g",c:195},{n:"牛排 130g 氣炸",c:195},{n:"麻辣雞胸 105g",c:115},{n:"水煮蛋",c:70},{n:"豆乾 100g",c:130},{n:"小黃瓜",c:25},{n:"青菜",c:41}],exs:[],carb:67,protein:118,fat:36,note:"輕量日，建立飲食習慣"},
+  {date:"3/12",wd:"週四",intake:1220,deficit:457,exercise:266,foods:[{n:"路易莎拿鐵 M",c:109},{n:"高蛋白粉",c:120},{n:"白飯 120g",c:170},{n:"爆汁豆乾 150g",c:195},{n:"牛排 130g 氣炸",c:195},{n:"麻辣雞胸 105g",c:115},{n:"水煮蛋 2顆",c:140},{n:"無糖豆漿",c:50},{n:"青菜",c:40}],exs:[{n:"爬坡早上 10分鐘",c:68},{n:"爬坡晚上 33分鐘",c:198}],carb:89,protein:89,fat:43,note:"雙段爬坡 赤字最高！"},
+  {date:"3/13",wd:"週五",intake:1256,deficit:295,exercise:140,foods:[{n:"高蛋白粉",c:120},{n:"路易莎拿鐵 M",c:109},{n:"白飯 120g",c:170},{n:"爆汁豆乾 150g",c:195},{n:"牛排 130g 氣炸",c:195},{n:"麻辣雞胸 105g",c:115},{n:"7-11雞胸肉 100g",c:110}],exs:[{n:"爬坡 20分鐘",c:140}],carb:78,protein:99,fat:35,note:"豬腳飯 → 改吃雞胸肉"},
+  {date:"3/14",wd:"週六",intake:1268,deficit:283,exercise:140,foods:[{n:"韓國高蛋白",c:160},{n:"炒碼麵（無牛肉）",c:420},{n:"大溪黑豆干 100g",c:135},{n:"水煮蛋",c:70},{n:"捏捏蛋沙拉 半份",c:93},{n:"大溪黑豆干 130g",c:175},{n:"麻辣雞胸 105g",c:115}],exs:[{n:"爬坡 20分鐘",c:140}],carb:98,protein:101,fat:46,note:"炒碼麵湯喝完"},
+  {date:"3/15",wd:"週日",intake:1396,deficit:215,exercise:200,foods:[{n:"黑芝麻高蛋白",c:160},{n:"韓式部隊鍋（含年糕）",c:650},{n:"烤鮭魚 100g",c:145},{n:"水煮蛋 1.5顆",c:105},{n:"青菜",c:40},{n:"草莓高蛋白",c:147},{n:"彼得好拿鐵 L 半杯",c:111}],exs:[{n:"🏋️ 重訓A臀腿（60分鐘）",c:200}],carb:107,protein:96,fat:58,note:"🎉 第一次臀腿重訓完成！"},
+  {date:"3/16",wd:"週一",intake:1277,deficit:279,exercise:145,foods:[{n:"韓國高蛋白",c:185},{n:"彼得好拿鐵 L 半杯",c:111},{n:"美式咖啡",c:10},{n:"日本7-11銅鑼燒",c:85},{n:"白飯 60g",c:85},{n:"青菜×2",c:80},{n:"大溪黑豆干 130g",c:175},{n:"麻辣雞胸 105g",c:115},{n:"烤鮭魚 100g",c:145},{n:"水煮蛋",c:70},{n:"青鳥蛋捲",c:106},{n:"少糖豆漿 300ml",c:110}],exs:[{n:"爬坡 20分鐘",c:145}],carb:91,protein:100,fat:44,note:"日本銅鑼燒戰利品！"},
+  {date:"3/17",wd:"週二",intake:1262,deficit:271,exercise:122,foods:[{n:"花生醬高蛋白",c:179},{n:"水煮蛋",c:70},{n:"白飯 1/4碗",c:85},{n:"大溪黑豆干 130g",c:175},{n:"牛排 130g 氣炸",c:195},{n:"泡菜 50g",c:20},{n:"麻辣雞胸 105g",c:115},{n:"少糖紅茶豆漿 500ml",c:185},{n:"cama金獎拿鐵",c:183}],exs:[{n:"爬坡 20分鐘",c:122}],carb:65,protein:110,fat:36,note:"週二完美收工"},
+  {date:"3/18",wd:"週三",intake:1305,deficit:196,exercise:223,foods:[{n:"高蛋白",c:148},{n:"路易莎拿鐵 M 2/3",c:73},{n:"泡菜 50g",c:20},{n:"白飯 1/5碗",c:68},{n:"牛排 130g 氣炸",c:195},{n:"大溪黑豆干 130g",c:175},{n:"韓風炸雞 104g",c:234},{n:"小黃瓜",c:25},{n:"少糖紅茶豆漿 500ml",c:185}],exs:[{n:"爬坡早上 15分鐘",c:96},{n:"爬坡晚上 20分鐘",c:127}],carb:93,protein:103,fat:52,note:"雙段爬坡補足量"},
+  {date:"3/19",wd:"週四",intake:1290,deficit:271,exercise:160,foods:[{n:"Flimeal Brown 17穀物",c:166},{n:"水煮蛋 2顆",c:140},{n:"小碗甜不辣",c:452},{n:"摩斯雞肉三明治（玄米）",c:366},{n:"摩斯拿鐵咖啡 M",c:121},{n:"麻辣雞胸 105g",c:115}],exs:[{n:"爬坡 27分鐘",c:160}],carb:96,protein:103,fat:60,note:"摩斯官方熱量表對照✓"},
+  {date:"3/20",wd:"週五",intake:1341,deficit:196,exercise:90,foods:[{n:"巧克力高蛋白",c:150},{n:"路易莎拿鐵 M 2/3",c:73},{n:"什錦滷味桶 750cc",c:388},{n:"芋頭米粉湯",c:180},{n:"水煮蛋",c:70},{n:"韓風炸雞 104g",c:234},{n:"小黃瓜",c:25},{n:"少糖紅茶豆漿 500ml",c:185}],exs:[{n:"爬坡 6分鐘",c:35},{n:"橢圓機 10分鐘",c:55}],carb:147,protein:75,fat:29,note:"🎉 發現公司橢圓機！"},
+  {date:"3/21",wd:"週六",intake:1265,deficit:276,exercise:130,foods:[{n:"高蛋白",c:148},{n:"美式咖啡",c:10},{n:"大心酸辣番茄豬肉麵",c:632},{n:"麻辣雞胸 105g",c:115},{n:"清燙青菜",c:30},{n:"水煮蛋",c:70},{n:"彼得好拿鐵 L",c:222},{n:"merci小巧克力",c:38}],exs:[{n:"居家臀腿運動 20分鐘",c:130}],carb:129,protein:83,fat:42,note:"merci巧克力 完全在額度內 🍫"},
+  {date:"3/22",wd:"週日",intake:1239,deficit:172,exercise:0,foods:[{n:"花生醬高蛋白",c:179},{n:"椒香豆乳湯麵",c:600},{n:"Carman's黑巧蛋白棒",c:190},{n:"水煮蛋",c:70},{n:"大溪黑豆干 130g",c:175},{n:"小黃瓜",c:25}],exs:[],carb:106,protein:84,fat:45,note:"💪 重訓B上半身居家完成！"},
+  {date:"3/23",wd:"週一",intake:1185,deficit:361,exercise:135,foods:[{n:"巧克力高蛋白",c:148},{n:"美式咖啡",c:10},{n:"大溪黑豆干 150g",c:202},{n:"麻辣雞胸 105g",c:115},{n:"杏鮑菇氣炸",c:40},{n:"青菜水煮",c:30},{n:"雪花餅",c:25},{n:"牛排 100g氣炸",c:150},{n:"青江菜4片",c:15},{n:"巧克力棒55g",c:158},{n:"福樂蛋白牛乳375ml",c:207},{n:"滷味蛋",c:85}],exs:[{n:"爬坡",c:135}],carb:92,protein:119,fat:41,note:"🏆 蛋白質119g 歷史最高！"},
+  {date:"3/24",wd:"週二",intake:921,deficit:605,exercise:115,foods:[{n:"草莓高蛋白",c:147},{n:"路易莎拿鐵 M",c:109},{n:"麻辣雞胸肉",c:121},{n:"大溪黑豆干 150g",c:202},{n:"全家香辣醬粉絲煲",c:162},{n:"牛排 100g氣炸",c:150},{n:"青菜水煮",c:30}],exs:[{n:"運動",c:115}],carb:71,protein:95,fat:31,note:"⚠️ 熱量偏低，建議補充"},
+];
+
+const BMR=1411,GOAL=1300;
+
+// BAR CHART
+const maxI=Math.max(...histDays.map(d=>d.intake)),maxD=Math.max(...histDays.map(d=>d.deficit));
+const ca=document.getElementById('chartArea');
+histDays.forEach(d=>{
+  const iH=Math.round((d.intake/maxI)*150),dH=Math.round((d.deficit/maxD)*150);
+  const col=document.createElement('div');col.className='chart-col';
+  col.innerHTML=`<div class="chart-bar-pair"><div class="chart-bar intake" style="height:${iH}px" title="${d.intake} kcal 攝取"></div><div class="chart-bar deficit" style="height:${dH}px" title="${d.deficit} kcal 赤字"></div></div><div class="chart-date">${d.date.replace('3/','')}</div>`;
+  ca.appendChild(col);
+});
+
+// LINE CHART
+(function(){
+  const svg=document.getElementById('lineSvg'),labEl=document.getElementById('lineLabels');
+  let cum=0;const pts=histDays.map(d=>{cum+=d.deficit;return cum;});
+  const maxC=Math.max(...pts);const W=800,H=200,PX=28,PY=16;
+  const xs=pts.map((_,i)=>PX+i*((W-PX*2)/(pts.length-1)));
+  const ys=pts.map(p=>H-PY-(p/maxC)*(H-PY*2));
+  let g='';
+  [0.25,0.5,0.75,1].forEach(r=>{
+    const y=H-PY-r*(H-PY*2),val=Math.round(maxC*r);
+    g+=`<line x1="${PX}" y1="${y}" x2="${W-PX}" y2="${y}" stroke="rgba(0,0,0,0.07)" stroke-width="1"/>
+    <text x="${PX-6}" y="${y+4}" text-anchor="end" font-size="11" fill="#888" font-family="DM Mono,monospace">${(val/1000).toFixed(1)}k</text>`;
+  });
+  const area=`M${xs[0]},${ys[0]} ${xs.map((x,i)=>`L${x},${ys[i]}`).join(' ')} L${xs[xs.length-1]},${H-PY} L${xs[0]},${H-PY} Z`;
+  const line=`M${xs[0]},${ys[0]} ${xs.map((x,i)=>`L${x},${ys[i]}`).join(' ')}`;
+  const dots=xs.map((x,i)=>`<circle cx="${x}" cy="${ys[i]}" r="5" fill="#7c4dff" stroke="white" stroke-width="2.5"><title>${histDays[i].date} 累積: ${pts[i].toLocaleString()} 大卡</title></circle>`).join('');
+  svg.innerHTML=`${g}<path d="${area}" fill="rgba(124,77,255,0.08)"/><path d="${line}" fill="none" stroke="#7c4dff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>${dots}`;
+  labEl.innerHTML='';histDays.forEach(d=>{const e=document.createElement('div');e.className='line-label';e.textContent=d.date.replace('3/','');labEl.appendChild(e);});
+  const total=pts[pts.length-1];
+  document.getElementById('cTotal').textContent=total.toLocaleString();
+  document.getElementById('cKg').textContent=(total/7700).toFixed(2);
+  document.getElementById('cAvg').textContent=Math.round(total/histDays.length);
+})();
+
+function switchTab(tab,el){
+  document.querySelectorAll('.chart-tab').forEach(t=>t.classList.remove('active'));el.classList.add('active');
+  document.getElementById('tab-daily').classList.toggle('active',tab==='daily');
+  document.getElementById('tab-cumul').classList.toggle('active',tab==='cumul');
+}
+
+// LOGGER
+let logFoods=[],logExs=[];
+function todayStr(){const d=new Date();return`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;}
+document.getElementById('logDate').value=todayStr();
+function loadDayLog(){
+  const k=`jlog_${document.getElementById('logDate').value}`;
+  try{logFoods=JSON.parse(localStorage.getItem(k)||'[]');logExs=JSON.parse(localStorage.getItem(k+'_ex')||'[]');}
+  catch{logFoods=[];logExs=[];}renderLog();
+}
+loadDayLog();
+function renderLog(){
+  const fl=document.getElementById('foodList'),el=document.getElementById('exList');
+  fl.innerHTML='';logFoods.forEach((f,i)=>{const li=document.createElement('li');li.className='log-item';li.innerHTML=`<span class="log-name">${f.name}</span><div class="log-right"><span class="log-cal pc">${f.cal} kcal</span><button class="del-btn" onclick="rmFood(${i})">×</button></div>`;fl.appendChild(li);});
+  document.getElementById('foodEmpty').style.display=logFoods.length?'none':'block';
+  el.innerHTML='';logExs.forEach((e,i)=>{const li=document.createElement('li');li.className='log-item ex-item';li.innerHTML=`<span class="log-name">🏃 ${e.name}</span><div class="log-right"><span class="log-cal mc">-${e.cal} kcal</span><button class="del-btn" onclick="rmEx(${i})">×</button></div>`;el.appendChild(li);});
+  document.getElementById('exEmpty').style.display=logExs.length?'none':'block';
+  updateSum();
+}
+function updateSum(){
+  const ti=logFoods.reduce((s,f)=>s+f.cal,0),te=logExs.reduce((s,e)=>s+e.cal,0);
+  const rem=GOAL-ti,def=BMR+te-ti,pct=Math.min((ti/GOAL)*100,100);
+  document.getElementById('sumI').textContent=ti;document.getElementById('sumR').textContent=Math.max(rem,0);
+  document.getElementById('sumE').textContent=te;document.getElementById('sumD').textContent=def;
+  document.getElementById('progText').textContent=`${ti} / ${GOAL} kcal`;
+  const b=document.getElementById('progBar');b.style.width=pct+'%';b.classList.toggle('over',ti>GOAL);
+}
+function addFood(){
+  const n=document.getElementById('fName').value.trim(),c=parseInt(document.getElementById('fCal').value);
+  if(!n||isNaN(c)||c<=0){toast('請輸入食物名稱和熱量 ⚠️');return;}
+  logFoods.push({name:n,cal:c});document.getElementById('fName').value='';document.getElementById('fCal').value='';document.getElementById('fName').focus();renderLog();
+}
+function addEx(){
+  const n=document.getElementById('eName').value.trim(),c=parseInt(document.getElementById('eCal').value);
+  if(!n||isNaN(c)||c<=0){toast('請輸入運動名稱和消耗 ⚠️');return;}
+  logExs.push({name:n,cal:c});document.getElementById('eName').value='';document.getElementById('eCal').value='';renderLog();
+}
+function rmFood(i){logFoods.splice(i,1);renderLog();}
+function rmEx(i){logExs.splice(i,1);renderLog();}
+function saveLog(){
+  const k=`jlog_${document.getElementById('logDate').value}`;
+  try{localStorage.setItem(k,JSON.stringify(logFoods));localStorage.setItem(k+'_ex',JSON.stringify(logExs));toast('✓ 記錄已儲存！','ok');}
+  catch{toast('儲存失敗 ⚠️');}
+}
+function clearLog(){if(!confirm('確定要清除今日記錄嗎？'))return;logFoods=[];logExs=[];renderLog();toast('已清除今日記錄');}
+function addFromCalc(){
+  const n=document.getElementById('resultName').textContent,c=parseInt(document.getElementById('resultCal').textContent);
+  if(!n||isNaN(c))return;
+  logFoods.push({name:n,cal:c});renderLog();
+  document.getElementById('logger').scrollIntoView({behavior:'smooth'});
+  toast(`✓ 已加入：${n} ${c} kcal`,'ok');
+}
+
+// RECORDS
+const rg=document.getElementById('recordsGrid');
+[...histDays].reverse().forEach(d=>{
+  const ok=d.intake<=1300;const card=document.createElement('div');card.className='day-card';
+  card.innerHTML=`<div class="day-header" onclick="this.parentElement.classList.toggle('open')">
+    <div><div class="day-wd">${d.wd}</div><div class="day-dt">${d.date}</div></div>
+    <div class="day-pills">
+      <div class="pill pp"><span class="pill-v">🔥 ${d.intake}</span><span style="font-size:10px;opacity:.7"> kcal</span></div>
+      <div class="pill mp"><span class="pill-v">⚡ -${d.deficit}</span><span style="font-size:10px;opacity:.7"> 赤字</span></div>
+      ${d.exercise>0?`<div class="pill yp"><span class="pill-v">🏃 -${d.exercise}</span></div>`:''}
+      ${ok?'<div class="pill mp">✓ 達標</div>':'<div class="pill pp">↑ 超標</div>'}
+    </div><div class="day-chev">▾</div>
+  </div>
+  <div class="day-detail">
+    ${d.note?`<div class="note-strip">${d.note}</div>`:''}
+    <div class="detail-cols">
+      <div class="detail-block"><h5>🍽 飲食記錄</h5>
+        ${d.foods.map(f=>`<div class="f-row"><span class="f-n">${f.n}</span><span class="f-c">${f.c}</span></div>`).join('')}
+        <div class="f-row" style="border-top:1px solid var(--border);margin-top:4px;padding-top:10px"><span style="font-weight:700">合計</span><span class="f-c" style="font-size:14px">${d.intake} kcal</span></div>
+      </div>
+      <div class="detail-block"><h5>💪 運動記錄</h5>
+        ${d.exs.length?d.exs.map(e=>`<div class="e-row"><div class="e-dot"></div><span>${e.n}</span><span class="e-cal">-${e.c} kcal</span></div>`).join(''):'<div style="color:var(--muted);font-size:13px;padding:8px 0">休息日</div>'}
+        <div class="macro-rows" style="margin-top:16px"><h5>📊 三大營養素</h5>
+          ${[{l:'碳水',v:d.carb,m:150,c:'mfc'},{l:'蛋白質',v:d.protein,m:130,c:'mfp'},{l:'脂肪',v:d.fat,m:60,c:'mff'}].map(x=>`<div class="macro-row-item"><div class="macro-top"><span class="macro-n">${x.l}</span><span class="macro-v">${x.v}g</span></div><div class="macro-track"><div class="macro-fill ${x.c}" style="width:${Math.min(x.v/x.m*100,100)}%"></div></div></div>`).join('')}
+        </div>
+      </div>
+    </div>
+  </div>`;
+  rg.appendChild(card);
+});
+
+function toast(msg,type=''){
+  const t=document.getElementById('toast');t.textContent=msg;t.className=`toast ${type} show`;
+  setTimeout(()=>t.classList.remove('show'),2800);
+}
+</script>
+</body>
+</html>
