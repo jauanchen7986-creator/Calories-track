@@ -391,6 +391,7 @@ const FOOD_DB = [
   {name:"Flimeal黑芝麻高蛋白",cal:160,carb:19,protein:19,fat:4,note:"韓國高蛋白飲品"},
   {name:"韓國高蛋白粉 148大卡",cal:148,carb:21,protein:19,fat:3,note:"45g沖泡式高蛋白"},
   {name:"福樂超能蛋白牛乳草莓 375ml",cal:207,carb:28,protein:21,fat:1,note:"福樂官方標籤數據"},
+  {name:"福樂超能蛋白牛乳奶茶 375ml",cal:200,carb:26,protein:20,fat:2,note:"福樂官方標籤數據 BCAA3953mg"},
   {name:"Carman's黑巧克力蛋白棒 40g",cal:190,carb:16,protein:12,fat:10,note:"澳洲Carman's官方"},
   {name:"少糖紅茶豆漿 500ml",cal:185,carb:20,protein:5,fat:5,note:"市售少糖豆漿"},
   {name:"無糖豆漿 500ml",cal:100,carb:5,protein:8,fat:4,note:"無糖豆漿"},
@@ -528,7 +529,7 @@ const histDays=[
   {date:"3/21",wd:"週六",intake:1265,deficit:276,exercise:130,foods:[{n:"高蛋白",c:148},{n:"美式咖啡",c:10},{n:"大心酸辣番茄豬肉麵",c:632},{n:"麻辣雞胸 105g",c:115},{n:"清燙青菜",c:30},{n:"水煮蛋",c:70},{n:"彼得好拿鐵 L",c:222},{n:"merci小巧克力",c:38}],exs:[{n:"居家臀腿運動 20分鐘",c:130}],carb:129,protein:83,fat:42,note:"merci巧克力 完全在額度內 🍫"},
   {date:"3/22",wd:"週日",intake:1239,deficit:172,exercise:0,foods:[{n:"花生醬高蛋白",c:179},{n:"椒香豆乳湯麵",c:600},{n:"Carman's黑巧蛋白棒",c:190},{n:"水煮蛋",c:70},{n:"大溪黑豆干 130g",c:175},{n:"小黃瓜",c:25}],exs:[],carb:106,protein:84,fat:45,note:"💪 重訓B上半身居家完成！"},
   {date:"3/23",wd:"週一",intake:1185,deficit:361,exercise:135,foods:[{n:"巧克力高蛋白",c:148},{n:"美式咖啡",c:10},{n:"大溪黑豆干 150g",c:202},{n:"麻辣雞胸 105g",c:115},{n:"杏鮑菇氣炸",c:40},{n:"青菜水煮",c:30},{n:"雪花餅",c:25},{n:"牛排 100g氣炸",c:150},{n:"青江菜4片",c:15},{n:"巧克力棒55g",c:158},{n:"福樂蛋白牛乳375ml",c:207},{n:"滷味蛋",c:85}],exs:[{n:"爬坡",c:135}],carb:92,protein:119,fat:41,note:"🏆 蛋白質119g 歷史最高！"},
-  {date:"3/24",wd:"週二",intake:921,deficit:605,exercise:115,foods:[{n:"草莓高蛋白",c:147},{n:"路易莎拿鐵 M",c:109},{n:"麻辣雞胸肉",c:121},{n:"大溪黑豆干 150g",c:202},{n:"全家香辣醬粉絲煲",c:162},{n:"牛排 100g氣炸",c:150},{n:"青菜水煮",c:30}],exs:[{n:"運動",c:115}],carb:71,protein:95,fat:31,note:"⚠️ 熱量偏低，建議補充"},
+  {date:"3/24",wd:"週二",intake:1191,deficit:335,exercise:115,foods:[{n:"草莓高蛋白",c:147},{n:"路易莎拿鐵 M",c:109},{n:"麻辣雞胸肉",c:121},{n:"大溪黑豆干 150g",c:202},{n:"全家香辣醬粉絲煲",c:162},{n:"牛排 100g氣炸",c:150},{n:"青菜水煮",c:30},{n:"福樂超能蛋白牛乳奶茶 375ml",c:200},{n:"水煮蛋 1顆",c:70}],exs:[{n:"運動",c:115}],carb:97,protein:122,fat:37,note:"🏆 蛋白質122g 歷史最高！奶茶蛋白牛乳神操作"},
 ];
 
 const BMR=1411,GOAL=1300;
@@ -577,10 +578,39 @@ function switchTab(tab,el){
 let logFoods=[],logExs=[];
 function todayStr(){const d=new Date();return`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;}
 document.getElementById('logDate').value=todayStr();
+
+// Convert date string like "3/11" to "2026-03-11"
+function histDateToKey(dateStr){
+  const parts=dateStr.split('/');
+  return`2026-${String(parts[0]).padStart(2,'0')}-${String(parts[1]).padStart(2,'0')}`;
+}
+
 function loadDayLog(){
-  const k=`jlog_${document.getElementById('logDate').value}`;
-  try{logFoods=JSON.parse(localStorage.getItem(k)||'[]');logExs=JSON.parse(localStorage.getItem(k+'_ex')||'[]');}
-  catch{logFoods=[];logExs=[];}renderLog();
+  const dateVal=document.getElementById('logDate').value;
+  const k=`jlog_${dateVal}`;
+  const saved=localStorage.getItem(k);
+  if(saved){
+    try{logFoods=JSON.parse(saved);logExs=JSON.parse(localStorage.getItem(k+'_ex')||'[]');}
+    catch{logFoods=[];logExs=[];}
+  } else {
+    // Try to load from histDays
+    const match=histDays.find(d=>histDateToKey(d.date)===dateVal);
+    if(match){
+      logFoods=match.foods.map(f=>({name:f.n,cal:f.c}));
+      logExs=match.exs.map(e=>({name:e.n,cal:e.c}));
+      toast('已載入歷史記錄，修改後請儲存 💾');
+    } else {
+      logFoods=[];logExs=[];
+    }
+  }
+  renderLog();
+}
+
+function loadHistDay(dateStr){
+  document.getElementById('logDate').value=histDateToKey(dateStr);
+  loadDayLog();
+  document.getElementById('logger').scrollIntoView({behavior:'smooth'});
+  toast('已載入 '+dateStr+' 的記錄，修改後請儲存 💾','ok');
 }
 loadDayLog();
 function renderLog(){
@@ -636,6 +666,7 @@ const rg=document.getElementById('recordsGrid');
       <div class="pill mp"><span class="pill-v">⚡ -${d.deficit}</span><span style="font-size:10px;opacity:.7"> 赤字</span></div>
       ${d.exercise>0?`<div class="pill yp"><span class="pill-v">🏃 -${d.exercise}</span></div>`:''}
       ${ok?'<div class="pill mp">✓ 達標</div>':'<div class="pill pp">↑ 超標</div>'}
+      <div class="pill" style="background:var(--purple-light);color:var(--purple);cursor:pointer" onclick="event.stopPropagation();loadHistDay('${d.date}')">✏️ 編輯</div>
     </div><div class="day-chev">▾</div>
   </div>
   <div class="day-detail">
