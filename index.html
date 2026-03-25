@@ -643,7 +643,7 @@ function rmFood(i){logFoods.splice(i,1);renderLog();}
 function rmEx(i){logExs.splice(i,1);renderLog();}
 function saveLog(){
   const k=`jlog_${document.getElementById('logDate').value}`;
-  try{localStorage.setItem(k,JSON.stringify(logFoods));localStorage.setItem(k+'_ex',JSON.stringify(logExs));toast('✓ 記錄已儲存！','ok');}
+  try{localStorage.setItem(k,JSON.stringify(logFoods));localStorage.setItem(k+'_ex',JSON.stringify(logExs));renderRecordsGrid();toast('✓ 記錄已儲存！','ok');}
   catch{toast('儲存失敗 ⚠️');}
 }
 function clearLog(){if(!confirm('確定要清除今日記錄嗎？'))return;logFoods=[];logExs=[];renderLog();toast('已清除今日記錄');}
@@ -656,36 +656,93 @@ function addFromCalc(){
 }
 
 // RECORDS
-const rg=document.getElementById('recordsGrid');
-[...histDays].reverse().forEach(d=>{
-  const ok=d.intake<=1300;const card=document.createElement('div');card.className='day-card';
-  card.innerHTML=`<div class="day-header" onclick="this.parentElement.classList.toggle('open')">
+function buildDayCard(d, dateKey) {
+  const ok = d.intake <= GOAL;
+  const card = document.createElement('div');
+  card.className = 'day-card';
+  card.innerHTML = `<div class="day-header" onclick="this.parentElement.classList.toggle('open')">
     <div><div class="day-wd">${d.wd}</div><div class="day-dt">${d.date}</div></div>
     <div class="day-pills">
       <div class="pill pp"><span class="pill-v">🔥 ${d.intake}</span><span style="font-size:10px;opacity:.7"> kcal</span></div>
       <div class="pill mp"><span class="pill-v">⚡ -${d.deficit}</span><span style="font-size:10px;opacity:.7"> 赤字</span></div>
-      ${d.exercise>0?`<div class="pill yp"><span class="pill-v">🏃 -${d.exercise}</span></div>`:''}
-      ${ok?'<div class="pill mp">✓ 達標</div>':'<div class="pill pp">↑ 超標</div>'}
-      <div class="pill" style="background:var(--purple-light);color:var(--purple);cursor:pointer" onclick="event.stopPropagation();loadHistDay('${d.date}')">✏️ 編輯</div>
+      ${d.exercise > 0 ? `<div class="pill yp"><span class="pill-v">🏃 -${d.exercise}</span></div>` : ''}
+      ${ok ? '<div class="pill mp">✓ 達標</div>' : '<div class="pill pp">↑ 超標</div>'}
+      <div class="pill" style="background:var(--purple-light);color:var(--purple);cursor:pointer" onclick="event.stopPropagation();editDay('${dateKey}')">✏️ 編輯</div>
     </div><div class="day-chev">▾</div>
   </div>
   <div class="day-detail">
-    ${d.note?`<div class="note-strip">${d.note}</div>`:''}
+    ${d.note ? `<div class="note-strip">${d.note}</div>` : ''}
     <div class="detail-cols">
       <div class="detail-block"><h5>🍽 飲食記錄</h5>
-        ${d.foods.map(f=>`<div class="f-row"><span class="f-n">${f.n}</span><span class="f-c">${f.c}</span></div>`).join('')}
+        ${d.foods.map(f => `<div class="f-row"><span class="f-n">${f.n}</span><span class="f-c">${f.c}</span></div>`).join('')}
         <div class="f-row" style="border-top:1px solid var(--border);margin-top:4px;padding-top:10px"><span style="font-weight:700">合計</span><span class="f-c" style="font-size:14px">${d.intake} kcal</span></div>
       </div>
       <div class="detail-block"><h5>💪 運動記錄</h5>
-        ${d.exs.length?d.exs.map(e=>`<div class="e-row"><div class="e-dot"></div><span>${e.n}</span><span class="e-cal">-${e.c} kcal</span></div>`).join(''):'<div style="color:var(--muted);font-size:13px;padding:8px 0">休息日</div>'}
+        ${d.exs.length ? d.exs.map(e => `<div class="e-row"><div class="e-dot"></div><span>${e.n}</span><span class="e-cal">-${e.c} kcal</span></div>`).join('') : '<div style="color:var(--muted);font-size:13px;padding:8px 0">休息日</div>'}
         <div class="macro-rows" style="margin-top:16px"><h5>📊 三大營養素</h5>
-          ${[{l:'碳水',v:d.carb,m:150,c:'mfc'},{l:'蛋白質',v:d.protein,m:130,c:'mfp'},{l:'脂肪',v:d.fat,m:60,c:'mff'}].map(x=>`<div class="macro-row-item"><div class="macro-top"><span class="macro-n">${x.l}</span><span class="macro-v">${x.v}g</span></div><div class="macro-track"><div class="macro-fill ${x.c}" style="width:${Math.min(x.v/x.m*100,100)}%"></div></div></div>`).join('')}
+          ${[{l:'碳水',v:d.carb,m:150,c:'mfc'},{l:'蛋白質',v:d.protein,m:130,c:'mfp'},{l:'脂肪',v:d.fat,m:60,c:'mff'}].map(x => `<div class="macro-row-item"><div class="macro-top"><span class="macro-n">${x.l}</span><span class="macro-v">${x.v}g</span></div><div class="macro-track"><div class="macro-fill ${x.c}" style="width:${Math.min(x.v / x.m * 100, 100)}%"></div></div></div>`).join('')}
         </div>
       </div>
     </div>
   </div>`;
-  rg.appendChild(card);
-});
+  return card;
+}
+
+function renderRecordsGrid() {
+  const rg = document.getElementById('recordsGrid');
+  rg.innerHTML = '';
+  const allDays = {};
+
+  // Load hardcoded histDays
+  histDays.forEach(d => {
+    const parts = d.date.split('/');
+    const key = `2026-${String(parts[0]).padStart(2,'0')}-${String(parts[1]).padStart(2,'0')}`;
+    allDays[key] = { ...d };
+  });
+
+  // Load localStorage entries (override histDays if same date)
+  for (let i = 0; i < localStorage.length; i++) {
+    const lsKey = localStorage.key(i);
+    if (!lsKey || !lsKey.startsWith('jlog_') || lsKey.endsWith('_ex')) continue;
+    const dateKey = lsKey.replace('jlog_', '');
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(dateKey)) continue;
+    try {
+      const foods = JSON.parse(localStorage.getItem(lsKey) || '[]');
+      const exs = JSON.parse(localStorage.getItem(lsKey + '_ex') || '[]');
+      if (foods.length === 0 && exs.length === 0) continue;
+      const intake = foods.reduce((s, f) => s + f.cal, 0);
+      const exercise = exs.reduce((s, e) => s + e.cal, 0);
+      const deficit = BMR + exercise - intake;
+      const dt = new Date(dateKey + 'T00:00:00');
+      const wdNames = ['週日','週一','週二','週三','週四','週五','週六'];
+      const existing = allDays[dateKey] || {};
+      allDays[dateKey] = {
+        date: `${dt.getMonth()+1}/${dt.getDate()}`,
+        wd: wdNames[dt.getDay()],
+        intake, exercise, deficit,
+        foods: foods.map(f => ({n: f.name, c: f.cal})),
+        exs: exs.map(e => ({n: e.name, c: e.cal})),
+        carb: existing.carb || 0,
+        protein: existing.protein || 0,
+        fat: existing.fat || 0,
+        note: existing.note || ''
+      };
+    } catch(e) {}
+  }
+
+  Object.entries(allDays).sort((a, b) => b[0].localeCompare(a[0])).forEach(([dateKey, d]) => {
+    document.getElementById('recordsGrid').appendChild(buildDayCard(d, dateKey));
+  });
+}
+
+function editDay(dateKey) {
+  document.getElementById('logDate').value = dateKey;
+  loadDayLog();
+  document.getElementById('logger').scrollIntoView({behavior: 'smooth'});
+  toast('✓ 已載入 ' + dateKey + ' 的記錄，修改後按儲存即可更新', 'ok');
+}
+
+renderRecordsGrid();
 
 function toast(msg,type=''){
   const t=document.getElementById('toast');t.textContent=msg;t.className=`toast ${type} show`;
