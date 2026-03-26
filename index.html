@@ -79,6 +79,12 @@ svg.ring{width:140px;height:140px;transform:rotate(-90deg);}
 .calc-note{font-size:12px;color:var(--muted);margin-top:12px;line-height:1.6;}
 .ai-add-btn{margin-top:12px;background:var(--purple-light);color:var(--purple);border:none;border-radius:10px;padding:10px 18px;font-size:12px;font-weight:700;cursor:pointer;transition:all 0.2s;}
 .ai-add-btn:hover{background:var(--purple);color:var(--white);}
+.portion-row{display:flex;align-items:center;gap:8px;margin-top:14px;flex-wrap:wrap;}
+.portion-label{font-size:11px;color:var(--muted);letter-spacing:1px;font-weight:700;}
+.portion-chip{border:1.5px solid var(--border);border-radius:100px;padding:5px 14px;font-size:12px;font-weight:700;cursor:pointer;background:var(--surface);color:var(--muted);transition:all 0.15s;}
+.portion-chip:hover{border-color:var(--pink);color:var(--pink);}
+.portion-chip.active{background:var(--pink);color:var(--white);border-color:var(--pink);}
+.log-macros{font-size:11px;color:var(--muted);margin-top:2px;}
 .main{max-width:1100px;margin:0 auto;padding:48px 40px;}
 .section-header{display:flex;align-items:baseline;gap:12px;margin-bottom:24px;}
 .section-title-big{font-family:'Bebas Neue',cursive;font-size:40px;letter-spacing:2px;color:var(--black);}
@@ -316,6 +322,14 @@ svg.ring{width:140px;height:140px;transform:rotate(-90deg);}
       </div>
       <div class="calc-macros" id="resultMacros"></div>
       <div class="calc-note" id="resultNote"></div>
+      <div class="portion-row">
+        <span class="portion-label">份量</span>
+        <button class="portion-chip" data-mult="0.5" onclick="setPortionCalc(0.5)">½ 份</button>
+        <button class="portion-chip active" data-mult="1" onclick="setPortionCalc(1)">1 份</button>
+        <button class="portion-chip" data-mult="1.5" onclick="setPortionCalc(1.5)">1.5 份</button>
+        <button class="portion-chip" data-mult="2" onclick="setPortionCalc(2)">2 份</button>
+        <button class="portion-chip" data-mult="3" onclick="setPortionCalc(3)">3 份</button>
+      </div>
       <button class="ai-add-btn" onclick="addFromCalc()">＋ 加入今日記錄</button>
     </div>
 
@@ -341,6 +355,14 @@ svg.ring{width:140px;height:140px;transform:rotate(-90deg);}
       </div>
       <div class="calc-macros" id="wsMacros"></div>
       <div class="calc-note" id="wsNote" style="margin-top:10px;font-size:12px;color:var(--muted);line-height:1.6;"></div>
+      <div class="portion-row">
+        <span class="portion-label">份量</span>
+        <button class="portion-chip ws-pc" data-mult="0.5" onclick="setPortionWS(0.5)">½ 份</button>
+        <button class="portion-chip ws-pc active" data-mult="1" onclick="setPortionWS(1)">1 份</button>
+        <button class="portion-chip ws-pc" data-mult="1.5" onclick="setPortionWS(1.5)">1.5 份</button>
+        <button class="portion-chip ws-pc" data-mult="2" onclick="setPortionWS(2)">2 份</button>
+        <button class="portion-chip ws-pc" data-mult="3" onclick="setPortionWS(3)">3 份</button>
+      </div>
       <div class="ws-action-row">
         <button class="ws-add-btn" onclick="addFromWS()">＋ 加入今日記錄</button>
         <button class="ws-save-db-btn" onclick="saveToCustomDB()">📌 加入我的食物資料庫</button>
@@ -577,16 +599,36 @@ function doSearch() {
   document.getElementById('searchDrop').classList.remove('show');
 }
 
+let _calcFood = null, _calcMult = 1;
+let _wsFood = null, _wsMult = 1;
+
+function macroHTML(carb, protein, fat) {
+  return `<div class="calc-macro"><div class="calc-macro-val carb">${carb}g</div><div class="calc-macro-label">碳水</div></div>
+          <div class="calc-macro"><div class="calc-macro-val protein">${protein}g</div><div class="calc-macro-label">蛋白質</div></div>
+          <div class="calc-macro"><div class="calc-macro-val fat">${fat}g</div><div class="calc-macro-label">脂肪</div></div>`;
+}
+
 function selectFood(f) {
   document.getElementById('searchDrop').classList.remove('show');
-  document.getElementById('resultName').textContent = f.name;
-  document.getElementById('resultCal').textContent = f.cal;
-  document.getElementById('resultMacros').innerHTML =
-    `<div class="calc-macro"><div class="calc-macro-val carb">${f.carb}g</div><div class="calc-macro-label">碳水</div></div>
-     <div class="calc-macro"><div class="calc-macro-val protein">${f.protein}g</div><div class="calc-macro-label">蛋白質</div></div>
-     <div class="calc-macro"><div class="calc-macro-val fat">${f.fat}g</div><div class="calc-macro-label">脂肪</div></div>`;
-  document.getElementById('resultNote').textContent = f.note || '';
+  _calcFood = f; _calcMult = 1;
+  document.querySelectorAll('.portion-row .portion-chip:not(.ws-pc)').forEach(c => c.classList.toggle('active', c.dataset.mult === '1'));
+  _renderCalcResult();
   document.getElementById('calcResult').classList.add('show');
+}
+
+function _renderCalcResult() {
+  const f = _calcFood; if (!f) return;
+  const m = _calcMult;
+  document.getElementById('resultName').textContent = f.name + (m !== 1 ? ` ×${m}` : '');
+  document.getElementById('resultCal').textContent = Math.round(f.cal * m);
+  document.getElementById('resultMacros').innerHTML = macroHTML(Math.round((f.carb||0)*m), Math.round((f.protein||0)*m), Math.round((f.fat||0)*m));
+  document.getElementById('resultNote').textContent = f.note || '';
+}
+
+function setPortionCalc(mult) {
+  _calcMult = mult;
+  document.querySelectorAll('.portion-row .portion-chip:not(.ws-pc)').forEach(c => c.classList.toggle('active', parseFloat(c.dataset.mult) === mult));
+  _renderCalcResult();
 }
 
 function searchFood(q) {
@@ -759,7 +801,7 @@ function loadHistDay(dateStr){
 loadDayLog();
 function renderLog(){
   const fl=document.getElementById('foodList'),el=document.getElementById('exList');
-  fl.innerHTML='';logFoods.forEach((f,i)=>{const li=document.createElement('li');li.className='log-item';li.innerHTML=`<span class="log-name">${f.name}</span><div class="log-right"><span class="log-cal pc">${f.cal} kcal</span><button class="del-btn" onclick="rmFood(${i})">×</button></div>`;fl.appendChild(li);});
+  fl.innerHTML='';logFoods.forEach((f,i)=>{const li=document.createElement('li');li.className='log-item';const macroTip=(f.carb||f.protein||f.fat)?`<div class="log-macros">碳${f.carb||0}g 蛋${f.protein||0}g 脂${f.fat||0}g</div>`:'';li.innerHTML=`<div><span class="log-name">${f.name}</span>${macroTip}</div><div class="log-right"><span class="log-cal pc">${f.cal} kcal</span><button class="del-btn" onclick="rmFood(${i})">×</button></div>`;fl.appendChild(li);});
   document.getElementById('foodEmpty').style.display=logFoods.length?'none':'block';
   el.innerHTML='';logExs.forEach((e,i)=>{const li=document.createElement('li');li.className='log-item ex-item';li.innerHTML=`<span class="log-name">🏃 ${e.name}</span><div class="log-right"><span class="log-cal mc">-${e.cal} kcal</span><button class="del-btn" onclick="rmEx(${i})">×</button></div>`;el.appendChild(li);});
   document.getElementById('exEmpty').style.display=logExs.length?'none':'block';
@@ -792,11 +834,13 @@ function saveLog(){
 }
 function clearLog(){if(!confirm('確定要清除今日記錄嗎？'))return;logFoods=[];logExs=[];renderLog();toast('已清除今日記錄');}
 function addFromCalc(){
-  const n=document.getElementById('resultName').textContent,c=parseInt(document.getElementById('resultCal').textContent);
-  if(!n||isNaN(c))return;
-  logFoods.push({name:n,cal:c});renderLog();
+  if(!_calcFood)return;
+  const m=_calcMult, f=_calcFood;
+  const name=f.name+(m!==1?` ×${m}`:'');
+  const cal=Math.round(f.cal*m), carb=Math.round((f.carb||0)*m), protein=Math.round((f.protein||0)*m), fat=Math.round((f.fat||0)*m);
+  logFoods.push({name,cal,carb,protein,fat});renderLog();
   document.getElementById('logger').scrollIntoView({behavior:'smooth'});
-  toast(`✓ 已加入：${n} ${c} kcal`,'ok');
+  toast(`✓ 已加入：${name} ${cal} kcal`,'ok');
 }
 
 // RECORDS
@@ -866,9 +910,9 @@ function renderRecordsGrid() {
         intake, exercise, deficit,
         foods: foods.map(f => ({n: f.name, c: f.cal})),
         exs: exs.map(e => ({n: e.name, c: e.cal})),
-        carb: existing.carb || 0,
-        protein: existing.protein || 0,
-        fat: existing.fat || 0,
+        carb:    foods.reduce((s,f)=>s+(f.carb||0),0) || existing.carb || 0,
+        protein: foods.reduce((s,f)=>s+(f.protein||0),0) || existing.protein || 0,
+        fat:     foods.reduce((s,f)=>s+(f.fat||0),0) || existing.fat || 0,
         note: existing.note || ''
       };
     } catch(e) {}
@@ -978,23 +1022,37 @@ function selectWSProduct(i) {
 }
 
 function showWSResult(f) {
-  document.getElementById('wsFoodName').textContent = f.name;
-  document.getElementById('wsCalBadge').textContent = f.cal;
-  document.getElementById('wsMacros').innerHTML =
-    `<div class="calc-macro"><div class="calc-macro-val carb">${f.carb}g</div><div class="calc-macro-label">碳水</div></div>
-     <div class="calc-macro"><div class="calc-macro-val protein">${f.protein}g</div><div class="calc-macro-label">蛋白質</div></div>
-     <div class="calc-macro"><div class="calc-macro-val fat">${f.fat}g</div><div class="calc-macro-label">脂肪</div></div>`;
-  document.getElementById('wsNote').textContent = f.note || '';
+  _wsFood = f; _wsMult = 1;
+  document.querySelectorAll('.ws-pc').forEach(c => c.classList.toggle('active', c.dataset.mult === '1'));
+  _renderWSResult();
   document.getElementById('wsResult').classList.add('show');
   toast('✓ 已選擇：' + f.name, 'ok');
 }
 
+function _renderWSResult() {
+  const f = _wsFood; if (!f) return;
+  const m = _wsMult;
+  document.getElementById('wsFoodName').textContent = f.name + (m !== 1 ? ` ×${m}` : '');
+  document.getElementById('wsCalBadge').textContent = Math.round(f.cal * m);
+  document.getElementById('wsMacros').innerHTML = macroHTML(Math.round((f.carb||0)*m), Math.round((f.protein||0)*m), Math.round((f.fat||0)*m));
+  document.getElementById('wsNote').textContent = f.note || '';
+}
+
+function setPortionWS(mult) {
+  _wsMult = mult;
+  document.querySelectorAll('.ws-pc').forEach(c => c.classList.toggle('active', parseFloat(c.dataset.mult) === mult));
+  _renderWSResult();
+}
+
 function addFromWS() {
-  if (!wsResult) return;
-  logFoods.push({ name: wsResult.name, cal: wsResult.cal });
+  if (!_wsFood) return;
+  const m = _wsMult, f = _wsFood;
+  const name = f.name + (m !== 1 ? ` ×${m}` : '');
+  const cal = Math.round(f.cal*m), carb = Math.round((f.carb||0)*m), protein = Math.round((f.protein||0)*m), fat = Math.round((f.fat||0)*m);
+  logFoods.push({name, cal, carb, protein, fat});
   renderLog();
   document.getElementById('logger').scrollIntoView({ behavior: 'smooth' });
-  toast(`✓ 已加入：${wsResult.name} ${wsResult.cal} kcal`, 'ok');
+  toast(`✓ 已加入：${name} ${cal} kcal`, 'ok');
 }
 
 function saveToCustomDB() {
@@ -1006,7 +1064,10 @@ function addManual() {
   const name = document.getElementById('manName').value.trim();
   const cal = parseInt(document.getElementById('manCal').value);
   if (!name || isNaN(cal) || cal <= 0) { toast('請輸入食物名稱和熱量 ⚠️'); return; }
-  logFoods.push({ name, cal });
+  const carb = parseInt(document.getElementById('manCarb').value)||0;
+  const protein = parseInt(document.getElementById('manProtein').value)||0;
+  const fat = parseInt(document.getElementById('manFat').value)||0;
+  logFoods.push({ name, cal, carb, protein, fat });
   renderLog();
   document.getElementById('logger').scrollIntoView({ behavior: 'smooth' });
   toast(`✓ 已加入：${name} ${cal} kcal`, 'ok');
