@@ -210,6 +210,12 @@ svg.ring{width:140px;height:140px;transform:rotate(-90deg);}
 .ws-searching{display:none;align-items:center;gap:10px;padding:16px 0;color:var(--mint);font-size:13px;font-weight:600;}
 .ws-searching.show{display:flex;}
 .spin{width:18px;height:18px;border:3px solid var(--mint-light);border-top-color:var(--mint);border-radius:50%;animation:spin 0.8s linear infinite;}
+.ws-results-list{display:flex;flex-direction:column;gap:8px;margin-top:12px;}
+.ws-result-item{display:flex;justify-content:space-between;align-items:center;padding:12px 16px;background:var(--surface);border:1px solid var(--border);border-radius:12px;cursor:pointer;transition:all 0.15s;}
+.ws-result-item:hover{background:var(--mint-light);border-color:var(--mint);}
+.ws-result-item-name{font-size:13px;font-weight:500;color:var(--text);}
+.ws-result-item-brand{font-size:11px;color:var(--muted);margin-top:2px;}
+.ws-result-item-cal{font-family:'DM Mono';font-size:13px;color:var(--mint);font-weight:600;white-space:nowrap;}
 .ws-result{display:none;background:var(--mint-light);border-radius:20px;padding:24px 28px;border:1px solid rgba(0,194,168,0.2);margin-top:12px;}
 .ws-result.show{display:block;animation:fadeUp 0.3s ease;}
 .ws-result-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px;}
@@ -220,7 +226,12 @@ svg.ring{width:140px;height:140px;transform:rotate(-90deg);}
 .ws-add-btn:hover{background:#009985;}
 .ws-save-db-btn{background:var(--purple-light);color:var(--purple);border:none;border-radius:10px;padding:10px 18px;font-size:12px;font-weight:700;cursor:pointer;transition:all 0.2s;letter-spacing:1px;}
 .ws-save-db-btn:hover{background:var(--purple);color:var(--white);}
-.custom-db-section{margin-top:16px;padding-top:16px;border-top:1px solid rgba(0,194,168,0.2);}
+.ws-manual{margin-top:16px;padding:20px;background:var(--surface);border-radius:16px;border:1px dashed var(--border);}
+.ws-manual-title{font-size:11px;letter-spacing:2px;color:var(--muted);font-weight:700;margin-bottom:12px;}
+.ws-manual-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;}
+.ws-manual-input{flex:1;min-width:100px;border:2px solid var(--border);border-radius:10px;padding:10px 14px;font-size:13px;font-family:'Noto Sans KR',sans-serif;background:var(--white);outline:none;transition:border-color 0.2s;}
+.ws-manual-input:focus{border-color:var(--mint);}
+.custom-db-section{margin-top:20px;padding-top:16px;border-top:1px solid var(--border);}
 .custom-db-title{font-size:11px;letter-spacing:2px;color:var(--muted);font-weight:700;margin-bottom:10px;}
 .custom-db-list{display:flex;flex-direction:column;gap:6px;max-height:180px;overflow-y:auto;}
 .custom-db-item{display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:var(--white);border-radius:10px;border:1px solid var(--border);font-size:13px;}
@@ -309,27 +320,23 @@ svg.ring{width:140px;height:140px;transform:rotate(-90deg);}
     </div>
 
     <div class="search-section-divider"></div>
-    <div class="ws-label">✦ Claude AI · 線上查詢</div>
+    <div class="ws-label">✦ Open Food Facts · 免費公開資料庫</div>
     <div class="ws-title">查詢<span>不在資料庫的食物</span></div>
 
-    <div class="apikey-status" id="apikeyStatus">⚠ 尚未設定 API Key</div>
-    <div class="apikey-row">
-      <input class="apikey-input" id="apikeyInput" type="password" placeholder="貼上 Anthropic API Key（sk-ant-...）"/>
-      <button class="apikey-save-btn" onclick="saveApiKey()">儲存 Key</button>
-    </div>
-
     <div class="ws-input-row">
-      <input class="ws-input" id="wsInput" placeholder="輸入食物名稱，例如：麥當勞大麥克、黑糖珍奶、薑汁地瓜…" onkeydown="if(event.key==='Enter')webSearch()"/>
+      <input class="ws-input" id="wsInput" placeholder="輸入食物名稱，例如：麥當勞大麥克、可口可樂、燕麥棒…" onkeydown="if(event.key==='Enter')webSearch()"/>
       <button class="ws-btn" id="wsBtn" onclick="webSearch()">🔍 查詢</button>
     </div>
 
     <div class="ws-searching" id="wsSearching">
-      <div class="spin"></div>AI 查詢中，請稍候…
+      <div class="spin"></div>查詢中，請稍候…
     </div>
+
+    <div class="ws-results-list" id="wsResultsList"></div>
 
     <div class="ws-result" id="wsResult">
       <div class="ws-result-header">
-        <div><div class="ws-food-name" id="wsFoodName"></div><div class="calc-cal-unit">估算熱量 / 份</div></div>
+        <div><div class="ws-food-name" id="wsFoodName"></div><div class="calc-cal-unit">熱量 / 100g</div></div>
         <div><div class="ws-cal-badge" id="wsCalBadge"></div></div>
       </div>
       <div class="calc-macros" id="wsMacros"></div>
@@ -338,10 +345,26 @@ svg.ring{width:140px;height:140px;transform:rotate(-90deg);}
         <button class="ws-add-btn" onclick="addFromWS()">＋ 加入今日記錄</button>
         <button class="ws-save-db-btn" onclick="saveToCustomDB()">📌 加入我的食物資料庫</button>
       </div>
-      <div class="custom-db-section">
-        <div class="custom-db-title">我的食物資料庫</div>
-        <div class="custom-db-list" id="customDbList"></div>
+    </div>
+
+    <div class="ws-manual" id="wsManual">
+      <div class="ws-manual-title">找不到？手動輸入</div>
+      <div class="ws-manual-row">
+        <input class="ws-manual-input" id="manName" placeholder="食物名稱"/>
+        <input class="ws-manual-input" id="manCal" placeholder="熱量(kcal)" type="number" min="0"/>
+        <input class="ws-manual-input" id="manCarb" placeholder="碳水(g)" type="number" min="0"/>
+        <input class="ws-manual-input" id="manProtein" placeholder="蛋白質(g)" type="number" min="0"/>
+        <input class="ws-manual-input" id="manFat" placeholder="脂肪(g)" type="number" min="0"/>
       </div>
+      <div class="ws-action-row">
+        <button class="ws-add-btn" onclick="addManual()">＋ 加入今日記錄</button>
+        <button class="ws-save-db-btn" onclick="saveManualToDB()">📌 加入我的食物資料庫</button>
+      </div>
+    </div>
+
+    <div class="custom-db-section" id="customDbSection" style="display:none">
+      <div class="custom-db-title">我的食物資料庫</div>
+      <div class="custom-db-list" id="customDbList"></div>
     </div>
   </div>
 </div>
@@ -824,41 +847,20 @@ function toast(msg,type=''){
   setTimeout(()=>t.classList.remove('show'),2800);
 }
 
-// ── WEB SEARCH / AI LOOKUP ──────────────────────────────────────────────────
+// ── ONLINE FOOD SEARCH (Open Food Facts) ────────────────────────────────────
 let wsResult = null;
 
-// Load custom DB from localStorage and merge into FOOD_DB
-function loadCustomDB() {
+// Merge custom DB into FOOD_DB on load
+(function loadCustomDB() {
   try {
-    const custom = JSON.parse(localStorage.getItem('jlog_custom_db') || '[]');
-    custom.forEach(f => {
+    JSON.parse(localStorage.getItem('jlog_custom_db') || '[]').forEach(f => {
       if (!FOOD_DB.find(d => d.name === f.name)) FOOD_DB.push(f);
     });
   } catch(e) {}
-}
-loadCustomDB();
-
-(function initApiKey(){
-  const k = localStorage.getItem('anthropic_key') || '';
-  if (k) {
-    document.getElementById('apikeyInput').value = k;
-    document.getElementById('apikeyStatus').textContent = '✓ API Key 已設定';
-    document.getElementById('apikeyStatus').className = 'apikey-status ok';
-  }
+  renderCustomDBSection();
 })();
 
-function saveApiKey() {
-  const v = document.getElementById('apikeyInput').value.trim();
-  if (!v || !v.startsWith('sk-ant-')) { toast('請貼上正確的 API Key（sk-ant- 開頭）⚠️'); return; }
-  localStorage.setItem('anthropic_key', v);
-  document.getElementById('apikeyStatus').textContent = '✓ API Key 已儲存';
-  document.getElementById('apikeyStatus').className = 'apikey-status ok';
-  toast('✓ API Key 已儲存', 'ok');
-}
-
 async function webSearch() {
-  const key = localStorage.getItem('anthropic_key') || '';
-  if (!key) { toast('請先儲存 API Key ⚠️'); return; }
   const q = document.getElementById('wsInput').value.trim();
   if (!q) { toast('請輸入食物名稱 ⚠️'); return; }
 
@@ -866,44 +868,58 @@ async function webSearch() {
   const spinner = document.getElementById('wsSearching');
   btn.disabled = true;
   spinner.classList.add('show');
+  document.getElementById('wsResultsList').innerHTML = '';
   document.getElementById('wsResult').classList.remove('show');
   wsResult = null;
 
   try {
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'x-api-key': key,
-        'anthropic-version': '2023-06-01',
-        'content-type': 'application/json',
-        'anthropic-dangerous-direct-browser-access': 'true'
-      },
-      body: JSON.stringify({
-        model: 'claude-haiku-4-5-20251001',
-        max_tokens: 512,
-        messages: [{
-          role: 'user',
-          content: `請根據你的知識，查詢「${q}」的營養成分，以繁體中文回答，並以純 JSON 格式回傳（不要加任何 markdown 或說明文字）：
-{"name":"完整食物名稱","cal":熱量數字,"carb":碳水克數,"protein":蛋白質克數,"fat":脂肪克數,"note":"份量說明與資料來源（例如：官方標示、USDA、估算等）"}
-只回傳 JSON，不要加其他文字。`
-        }]
-      })
-    });
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({}));
-      throw new Error(err.error?.message || `HTTP ${res.status}`);
-    }
+    const url = `https://world.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(q)}&json=1&page_size=6&action=process&fields=product_name,brands,nutriments,serving_size`;
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
-    const text = data.content[0].text.trim();
-    const json = JSON.parse(text.replace(/```json|```/g, '').trim());
-    wsResult = json;
-    showWSResult(json);
+    const products = (data.products || []).filter(p =>
+      p.product_name && p.nutriments && p.nutriments['energy-kcal_100g'] != null
+    );
+    if (products.length === 0) {
+      document.getElementById('wsResultsList').innerHTML =
+        `<div style="color:var(--muted);font-size:13px;padding:10px 0">找不到「${q}」的資料，請用下方手動輸入 ↓</div>`;
+    } else {
+      document.getElementById('wsResultsList').innerHTML = products.map((p, i) => {
+        const n = p.nutriments;
+        const cal = Math.round(n['energy-kcal_100g'] || 0);
+        const name = [p.brands, p.product_name].filter(Boolean).join(' · ');
+        return `<div class="ws-result-item" onclick="selectWSProduct(${i})">
+          <div>
+            <div class="ws-result-item-name">${p.product_name}</div>
+            ${p.brands ? `<div class="ws-result-item-brand">${p.brands}</div>` : ''}
+          </div>
+          <div class="ws-result-item-cal">${cal} kcal/100g</div>
+        </div>`;
+      }).join('');
+      window._wsProducts = products;
+    }
   } catch(e) {
-    toast('查詢失敗：' + e.message + ' ⚠️');
+    document.getElementById('wsResultsList').innerHTML =
+      `<div style="color:var(--muted);font-size:13px;padding:10px 0">查詢失敗，請確認網路連線或使用下方手動輸入 ↓</div>`;
   } finally {
     btn.disabled = false;
     spinner.classList.remove('show');
   }
+}
+
+function selectWSProduct(i) {
+  const p = window._wsProducts[i];
+  const n = p.nutriments;
+  const name = [p.brands, p.product_name].filter(Boolean).join(' · ');
+  wsResult = {
+    name: p.product_name || name,
+    cal: Math.round(n['energy-kcal_100g'] || 0),
+    carb: Math.round(n['carbohydrates_100g'] || 0),
+    protein: Math.round(n['proteins_100g'] || 0),
+    fat: Math.round(n['fat_100g'] || 0),
+    note: `來源：Open Food Facts · ${p.brands || ''} · 以每 100g 計算`
+  };
+  showWSResult(wsResult);
 }
 
 function showWSResult(f) {
@@ -914,9 +930,8 @@ function showWSResult(f) {
      <div class="calc-macro"><div class="calc-macro-val protein">${f.protein}g</div><div class="calc-macro-label">蛋白質</div></div>
      <div class="calc-macro"><div class="calc-macro-val fat">${f.fat}g</div><div class="calc-macro-label">脂肪</div></div>`;
   document.getElementById('wsNote').textContent = f.note || '';
-  renderCustomDBList();
   document.getElementById('wsResult').classList.add('show');
-  toast('✓ 查詢完成：' + f.name + ' ' + f.cal + ' kcal', 'ok');
+  toast('✓ 已選擇：' + f.name, 'ok');
 }
 
 function addFromWS() {
@@ -929,33 +944,55 @@ function addFromWS() {
 
 function saveToCustomDB() {
   if (!wsResult) return;
+  _saveEntryToDB(wsResult);
+}
+
+function addManual() {
+  const name = document.getElementById('manName').value.trim();
+  const cal = parseInt(document.getElementById('manCal').value);
+  if (!name || isNaN(cal) || cal <= 0) { toast('請輸入食物名稱和熱量 ⚠️'); return; }
+  logFoods.push({ name, cal });
+  renderLog();
+  document.getElementById('logger').scrollIntoView({ behavior: 'smooth' });
+  toast(`✓ 已加入：${name} ${cal} kcal`, 'ok');
+}
+
+function saveManualToDB() {
+  const name = document.getElementById('manName').value.trim();
+  const cal = parseInt(document.getElementById('manCal').value) || 0;
+  const carb = parseInt(document.getElementById('manCarb').value) || 0;
+  const protein = parseInt(document.getElementById('manProtein').value) || 0;
+  const fat = parseInt(document.getElementById('manFat').value) || 0;
+  if (!name || !cal) { toast('請至少輸入名稱和熱量 ⚠️'); return; }
+  _saveEntryToDB({ name, cal, carb, protein, fat, note: '手動輸入' });
+}
+
+function _saveEntryToDB(entry) {
   try {
     const custom = JSON.parse(localStorage.getItem('jlog_custom_db') || '[]');
-    if (custom.find(f => f.name === wsResult.name)) { toast('此食物已在資料庫中 ✓'); return; }
-    const entry = { name: wsResult.name, cal: wsResult.cal, carb: wsResult.carb, protein: wsResult.protein, fat: wsResult.fat, note: wsResult.note || 'AI 查詢' };
+    if (custom.find(f => f.name === entry.name)) { toast('此食物已在資料庫中 ✓'); return; }
     custom.push(entry);
     localStorage.setItem('jlog_custom_db', JSON.stringify(custom));
     if (!FOOD_DB.find(d => d.name === entry.name)) FOOD_DB.push(entry);
-    renderCustomDBList();
+    renderCustomDBSection();
     toast('✓ 已加入我的食物資料庫！', 'ok');
   } catch(e) { toast('儲存失敗 ⚠️'); }
 }
 
-function renderCustomDBList() {
+function renderCustomDBSection() {
+  const section = document.getElementById('customDbSection');
   const list = document.getElementById('customDbList');
-  if (!list) return;
+  if (!section || !list) return;
   try {
     const custom = JSON.parse(localStorage.getItem('jlog_custom_db') || '[]');
-    if (custom.length === 0) {
-      list.innerHTML = '<div style="color:var(--muted);font-size:12px;padding:6px 0">尚無自訂食物</div>';
-      return;
-    }
+    if (custom.length === 0) { section.style.display = 'none'; return; }
+    section.style.display = 'block';
     list.innerHTML = custom.map((f, i) =>
       `<div class="custom-db-item">
         <span>${f.name}</span>
         <div style="display:flex;align-items:center;gap:10px">
           <span class="custom-db-cal">${f.cal} kcal</span>
-          <button class="custom-db-del" onclick="deleteCustomDB(${i})" title="刪除">×</button>
+          <button class="custom-db-del" onclick="deleteCustomDB(${i})">×</button>
         </div>
       </div>`
     ).join('');
@@ -969,7 +1006,7 @@ function deleteCustomDB(i) {
     localStorage.setItem('jlog_custom_db', JSON.stringify(custom));
     const idx = FOOD_DB.findIndex(d => d.name === removed?.name);
     if (idx > -1) FOOD_DB.splice(idx, 1);
-    renderCustomDBList();
+    renderCustomDBSection();
     toast('已從資料庫移除');
   } catch(e) {}
 }
