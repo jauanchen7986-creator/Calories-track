@@ -860,6 +860,19 @@ let wsResult = null;
   renderCustomDBSection();
 })();
 
+function getKcal(n) {
+  if (!n) return 0;
+  if (n['energy-kcal_100g'] != null) return Math.round(n['energy-kcal_100g']);
+  if (n['energy-kcal']      != null) return Math.round(n['energy-kcal']);
+  if (n['energy_100g']      != null) return Math.round(n['energy_100g'] / 4.184);
+  if (n['energy']           != null) return Math.round(n['energy'] / 4.184);
+  return 0;
+}
+function getMacro(n, ...keys) {
+  for (const k of keys) if (n[k] != null) return Math.round(n[k]);
+  return 0;
+}
+
 async function webSearch() {
   const q = document.getElementById('wsInput').value.trim();
   if (!q) { toast('請輸入食物名稱 ⚠️'); return; }
@@ -873,34 +886,31 @@ async function webSearch() {
   wsResult = null;
 
   try {
-    const url = `https://world.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(q)}&json=1&page_size=6&action=process&fields=product_name,brands,nutriments,serving_size`;
-    const res = await fetch(url);
+    const url = `https://world.openfoodfacts.org/api/v2/search?search_terms=${encodeURIComponent(q)}&page_size=8&fields=product_name,brands,nutriments`;
+    const res = await fetch(url, { headers: { 'User-Agent': 'JLog-HealthTracker/1.0' } });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
-    const products = (data.products || []).filter(p =>
-      p.product_name && p.nutriments && p.nutriments['energy-kcal_100g'] != null
-    );
+
+    const products = (data.products || []).filter(p => p.product_name && p.product_name.trim());
     if (products.length === 0) {
       document.getElementById('wsResultsList').innerHTML =
-        `<div style="color:var(--muted);font-size:13px;padding:10px 0">找不到「${q}」的資料，請用下方手動輸入 ↓</div>`;
+        `<div style="color:var(--muted);font-size:13px;padding:10px 0">找不到「${q}」，建議改用英文搜尋，或使用下方手動輸入 ↓</div>`;
     } else {
+      window._wsProducts = products;
       document.getElementById('wsResultsList').innerHTML = products.map((p, i) => {
-        const n = p.nutriments;
-        const cal = Math.round(n['energy-kcal_100g'] || 0);
-        const name = [p.brands, p.product_name].filter(Boolean).join(' · ');
+        const cal = getKcal(p.nutriments);
         return `<div class="ws-result-item" onclick="selectWSProduct(${i})">
           <div>
             <div class="ws-result-item-name">${p.product_name}</div>
             ${p.brands ? `<div class="ws-result-item-brand">${p.brands}</div>` : ''}
           </div>
-          <div class="ws-result-item-cal">${cal} kcal/100g</div>
+          <div class="ws-result-item-cal">${cal > 0 ? cal + ' kcal/100g' : '熱量未知'}</div>
         </div>`;
       }).join('');
-      window._wsProducts = products;
     }
   } catch(e) {
     document.getElementById('wsResultsList').innerHTML =
-      `<div style="color:var(--muted);font-size:13px;padding:10px 0">查詢失敗，請確認網路連線或使用下方手動輸入 ↓</div>`;
+      `<div style="color:var(--muted);font-size:13px;padding:10px 0">查詢失敗（${e.message}），請使用下方手動輸入 ↓</div>`;
   } finally {
     btn.disabled = false;
     spinner.classList.remove('show');
@@ -909,15 +919,14 @@ async function webSearch() {
 
 function selectWSProduct(i) {
   const p = window._wsProducts[i];
-  const n = p.nutriments;
-  const name = [p.brands, p.product_name].filter(Boolean).join(' · ');
+  const n = p.nutriments || {};
   wsResult = {
-    name: p.product_name || name,
-    cal: Math.round(n['energy-kcal_100g'] || 0),
-    carb: Math.round(n['carbohydrates_100g'] || 0),
-    protein: Math.round(n['proteins_100g'] || 0),
-    fat: Math.round(n['fat_100g'] || 0),
-    note: `來源：Open Food Facts · ${p.brands || ''} · 以每 100g 計算`
+    name: p.product_name,
+    cal: getKcal(n),
+    carb:    getMacro(n, 'carbohydrates_100g', 'carbohydrates'),
+    protein: getMacro(n, 'proteins_100g', 'proteins'),
+    fat:     getMacro(n, 'fat_100g', 'fat'),
+    note: `來源：Open Food Facts · ${p.brands || '未知品牌'} · 以每 100g 計算`
   };
   showWSResult(wsResult);
 }
