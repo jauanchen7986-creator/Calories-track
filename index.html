@@ -7,24 +7,24 @@
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=Noto+Sans+KR:wght@300;400;500;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
 :root{
-  --bg:#f0ebe2;
+  --bg:#FFF5F8;
   --black:#261a0e;
   --white:#ffffff;
-  --pink:#a0682a;
-  --pink-light:#eedcca;
-  --mint:#5a8a70;
-  --mint-light:#d8ece2;
-  --yellow:#b8903a;
-  --yellow-light:#f5e8cc;
-  --purple:#7a5c48;
-  --purple-light:#ede0d8;
-  --warm:#c4854a;
-  --card-bg:#faf6f0;
-  --border:#ddd3c5;
-  --text:#261a0e;
-  --muted:#8c7b6a;
-  --surface:#ede7dc;
-  --ink-mid:#4a3828;
+  --pink:#FF6B9D;
+  --pink-light:#FFE4EF;
+  --mint:#4ECDC4;
+  --mint-light:#D0F5F3;
+  --yellow:#FFB830;
+  --yellow-light:#FFF3D6;
+  --purple:#C084FC;
+  --purple-light:#F3E8FF;
+  --warm:#FF8E53;
+  --card-bg:#FFFFFF;
+  --border:#FFD6E5;
+  --text:#2D1A2E;
+  --muted:#9B8EA0;
+  --surface:#FFF0F5;
+  --ink-mid:#5C4A6A;
 }
 *{margin:0;padding:0;box-sizing:border-box;}
 body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;}
@@ -902,14 +902,14 @@ loadDayLog();
 function renderLog(){
   const fl=document.getElementById('foodList'),el=document.getElementById('exList');
   fl.innerHTML='';logFoods.forEach((f,i)=>{const li=document.createElement('li');li.className='log-item';const macroTip=(f.carb||f.protein||f.fat)?`<div class="log-macros">碳${f.carb||0}g 蛋${f.protein||0}g 脂${f.fat||0}g</div>`:'';li.innerHTML=`<div><span class="log-name">${f.name}</span>${macroTip}</div><div class="log-right"><span class="log-cal pc">${f.cal} kcal</span><button class="del-btn" onclick="rmFood(${i})">×</button></div>`;fl.appendChild(li);});
-  document.getElementById('foodEmpty').style.display=logFoods.length?'none':'block';
+  document.getElementById('foodEmpty').style.display=logFoods.length?'none':'flex';
   el.innerHTML='';logExs.forEach((e,i)=>{const li=document.createElement('li');li.className='log-item ex-item';li.innerHTML=`<span class="log-name">🏃 ${e.name}</span><div class="log-right"><span class="log-cal mc">-${e.cal} kcal</span><button class="del-btn" onclick="rmEx(${i})">×</button></div>`;el.appendChild(li);});
   document.getElementById('exEmpty').style.display=logExs.length?'none':'block';
   updateSum();
 }
 function updateSum(){
   const ti=logFoods.reduce((s,f)=>s+f.cal,0),te=logExs.reduce((s,e)=>s+e.cal,0);
-  const rem=GOAL-ti,def=BMR+te-ti,pct=Math.min((ti/GOAL)*100,100);
+  const rem=GOAL-ti,def=(logFoods.length||logExs.length)?BMR+te-ti:0,pct=Math.min((ti/GOAL)*100,100);
   document.getElementById('sumI').textContent=ti;document.getElementById('sumR').textContent=Math.max(rem,0);
   document.getElementById('sumE').textContent=te;document.getElementById('sumD').textContent=def;
   document.getElementById('progText').textContent=`${ti} / ${GOAL} kcal`;
