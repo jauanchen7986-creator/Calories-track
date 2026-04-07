@@ -266,21 +266,11 @@ svg.ring{width:140px;height:140px;transform:rotate(-90deg);}
 @keyframes spin{to{transform:rotate(360deg)}}
 @keyframes bounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
 @keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
-@keyframes floatBun{0%,100%{transform:translateY(0) rotate(-2deg)}50%{transform:translateY(-10px) rotate(2deg)}}
-@keyframes twinkle{0%,100%{opacity:1;transform:scale(1) rotate(0deg)}50%{opacity:0.5;transform:scale(0.8) rotate(20deg)}}
-/* DECO */
-.hero-bun{position:absolute;right:40px;bottom:0;opacity:0.92;animation:floatBun 5s ease-in-out infinite;pointer-events:none;}
-.hero-dots{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;overflow:hidden;}
-.hero-dot{position:absolute;border-radius:50%;background:rgba(255,255,255,0.06);}
-.deco-star{display:inline-block;color:var(--yellow);animation:twinkle 2.5s ease-in-out infinite;font-style:normal;}
-.deco-star:nth-child(2){animation-delay:0.8s;}
-.deco-star:nth-child(3){animation-delay:1.6s;}
+/* SECTION ACCENTS */
 .section-deco{display:flex;align-items:center;gap:10px;}
-.bun-sm{display:inline-block;animation:floatBun 4s ease-in-out infinite;vertical-align:middle;}
-.logger-bun-wrap{position:relative;flex-shrink:0;width:64px;height:64px;margin-left:auto;}
-.empty-bun{display:flex;flex-direction:column;align-items:center;gap:8px;padding:16px 0;color:var(--muted);font-size:13px;}
+.section-dot{width:8px;height:8px;border-radius:50%;background:var(--pink);flex-shrink:0;}
+.empty-state{display:flex;flex-direction:column;align-items:center;gap:6px;padding:28px 0;color:var(--muted);font-size:13px;letter-spacing:0.5px;}
 .calc-deco{display:flex;align-items:center;gap:8px;margin-bottom:8px;}
-.leaf-deco{display:inline-block;font-size:16px;opacity:0.7;}
 @media(max-width:768px){
   .hero-grid{grid-template-columns:1fr;gap:32px;}.hero-title{font-size:60px;}.hero::before{font-size:100px;}
   .calc-section{padding:0 20px;}.calc-card{padding:24px 20px;}.main{padding:32px 20px;}.site-header{padding:0 20px;}
@@ -305,39 +295,6 @@ svg.ring{width:140px;height:140px;transform:rotate(-90deg);}
 </header>
 
 <section class="hero">
-  <!-- background dots -->
-  <div class="hero-dots">
-    <div class="hero-dot" style="width:120px;height:120px;top:-40px;left:10%"></div>
-    <div class="hero-dot" style="width:60px;height:60px;top:30%;left:45%"></div>
-    <div class="hero-dot" style="width:80px;height:80px;bottom:10%;left:30%"></div>
-  </div>
-  <!-- floating rabbit -->
-  <div class="hero-bun">
-    <svg viewBox="0 0 130 175" width="130" xmlns="http://www.w3.org/2000/svg">
-      <ellipse cx="42" cy="30" rx="13" ry="30" fill="#f0e8de" stroke="#a0682a" stroke-width="1.8"/>
-      <ellipse cx="88" cy="30" rx="13" ry="30" fill="#f0e8de" stroke="#a0682a" stroke-width="1.8"/>
-      <ellipse cx="42" cy="30" rx="7" ry="20" fill="#e4c9b0"/>
-      <ellipse cx="88" cy="30" rx="7" ry="20" fill="#e4c9b0"/>
-      <circle cx="65" cy="80" r="40" fill="#f0e8de" stroke="#a0682a" stroke-width="1.8"/>
-      <circle cx="50" cy="73" r="5" fill="#261a0e"/>
-      <circle cx="80" cy="73" r="5" fill="#261a0e"/>
-      <circle cx="52" cy="71" r="1.8" fill="white"/>
-      <circle cx="82" cy="71" r="1.8" fill="white"/>
-      <ellipse cx="65" cy="84" rx="4" ry="3" fill="#c4854a"/>
-      <path d="M59 90 Q65 96 71 90" stroke="#a0682a" stroke-width="1.5" fill="none" stroke-linecap="round"/>
-      <ellipse cx="44" cy="82" rx="9" ry="5.5" fill="#e4c9b0" opacity="0.85"/>
-      <ellipse cx="86" cy="82" rx="9" ry="5.5" fill="#e4c9b0" opacity="0.85"/>
-      <ellipse cx="65" cy="138" rx="36" ry="33" fill="#f0e8de" stroke="#a0682a" stroke-width="1.8"/>
-      <ellipse cx="38" cy="125" rx="11" ry="15" fill="#f0e8de" stroke="#a0682a" stroke-width="1.5" transform="rotate(-18 38 125)"/>
-      <ellipse cx="92" cy="125" rx="11" ry="15" fill="#f0e8de" stroke="#a0682a" stroke-width="1.5" transform="rotate(18 92 125)"/>
-      <ellipse cx="65" cy="142" rx="20" ry="17" fill="#e4c9b0"/>
-      <!-- holding carrot -->
-      <line x1="86" y1="128" x2="104" y2="112" stroke="#a0682a" stroke-width="2" stroke-linecap="round"/>
-      <ellipse cx="107" cy="109" rx="5" ry="9" fill="#c4854a" transform="rotate(-40 107 109)"/>
-      <path d="M103 103 Q106 98 109 101" stroke="#5a8a70" stroke-width="1.5" fill="none" stroke-linecap="round"/>
-      <path d="M105 101 Q107 95 111 98" stroke="#5a8a70" stroke-width="1.5" fill="none" stroke-linecap="round"/>
-    </svg>
-  </div>
   <div class="hero-grid">
     <div>
       <div class="hero-title"><div class="h1c">Joanne</div><div>Health<br><span class="h2c">Journey</span></div></div>
@@ -365,7 +322,7 @@ svg.ring{width:140px;height:140px;transform:rotate(-90deg);}
 
 <div class="calc-section">
   <div class="calc-card">
-    <div class="calc-deco"><div class="calc-label">✦ 內建食物資料庫 · 即時搜尋</div><span class="bun-sm"><svg viewBox="0 0 28 36" width="20" xmlns="http://www.w3.org/2000/svg"><ellipse cx="9" cy="6" rx="3.5" ry="8" fill="#eedcca" stroke="#ddd3c5" stroke-width="1"/><ellipse cx="19" cy="6" rx="3.5" ry="8" fill="#eedcca" stroke="#ddd3c5" stroke-width="1"/><circle cx="14" cy="20" r="10" fill="#eedcca" stroke="#ddd3c5" stroke-width="1"/><circle cx="10" cy="18" r="1.5" fill="#4a3828"/><circle cx="18" cy="18" r="1.5" fill="#4a3828"/><ellipse cx="14" cy="22" rx="1.5" ry="1" fill="#c4854a"/></svg></span></div>
+    <div class="calc-label">內建食物資料庫 · 即時搜尋</div>
     <div class="calc-title">熱量<span>查找器</span></div>
     <div class="calc-chips">
       <div class="chip" onclick="searchFood('路易莎莊園拿鐵')">路易莎拿鐵 M</div>
@@ -460,7 +417,7 @@ svg.ring{width:140px;height:140px;transform:rotate(-90deg);}
 
 <div class="main">
   <div class="section-header" style="margin-top:48px">
-    <div class="section-deco"><div class="section-title-big">數據圖表</div><em class="deco-star">✦</em><em class="deco-star">✦</em></div>
+    <div class="section-deco"><div class="section-dot"></div><div class="section-title-big">數據圖表</div></div>
     <div class="section-badge">3/11 — 3/24</div>
   </div>
   <div class="chart-card">
@@ -489,30 +446,13 @@ svg.ring{width:140px;height:140px;transform:rotate(-90deg);}
 
   <div id="logger">
     <div class="section-header">
-      <div class="section-deco"><div class="section-title-big">今日記錄</div><span class="bun-sm"><svg viewBox="0 0 28 36" width="22" xmlns="http://www.w3.org/2000/svg"><ellipse cx="9" cy="6" rx="3.5" ry="8" fill="#eedcca" stroke="#ddd3c5" stroke-width="1"/><ellipse cx="19" cy="6" rx="3.5" ry="8" fill="#eedcca" stroke="#ddd3c5" stroke-width="1"/><circle cx="14" cy="20" r="10" fill="#eedcca" stroke="#ddd3c5" stroke-width="1"/><circle cx="10" cy="18" r="1.5" fill="#4a3828"/><circle cx="18" cy="18" r="1.5" fill="#4a3828"/><ellipse cx="14" cy="22" rx="1.5" ry="1" fill="#c4854a"/></svg></span></div>
+      <div class="section-deco"><div class="section-dot"></div><div class="section-title-big">今日記錄</div></div>
       <div class="section-badge">手動輸入飲食 · 自動計算</div>
     </div>
     <div class="logger-card">
       <div class="logger-header">
         <div><h3>DAILY LOG</h3><p>記錄今天吃了什麼 · 自動計算熱量與赤字</p></div>
         <input type="date" class="date-input" id="logDate" onchange="loadDayLog()"/>
-        <div class="logger-bun-wrap">
-          <svg viewBox="0 0 80 100" width="64" xmlns="http://www.w3.org/2000/svg" style="animation:floatBun 4s ease-in-out infinite;display:block;">
-            <ellipse cx="26" cy="18" rx="8" ry="18" fill="#f0e8de" stroke="rgba(255,255,255,0.4)" stroke-width="1.5"/>
-            <ellipse cx="54" cy="18" rx="8" ry="18" fill="#f0e8de" stroke="rgba(255,255,255,0.4)" stroke-width="1.5"/>
-            <ellipse cx="26" cy="18" rx="4.5" ry="12" fill="#e4c9b0"/>
-            <ellipse cx="54" cy="18" rx="4.5" ry="12" fill="#e4c9b0"/>
-            <circle cx="40" cy="52" r="26" fill="#f0e8de" stroke="rgba(255,255,255,0.4)" stroke-width="1.5"/>
-            <circle cx="31" cy="47" r="3.5" fill="#261a0e"/>
-            <circle cx="49" cy="47" r="3.5" fill="#261a0e"/>
-            <circle cx="32.2" cy="45.8" r="1.2" fill="white"/>
-            <circle cx="50.2" cy="45.8" r="1.2" fill="white"/>
-            <ellipse cx="40" cy="55" rx="3" ry="2" fill="#c4854a"/>
-            <ellipse cx="27" cy="53" rx="6" ry="3.5" fill="#e4c9b0" opacity="0.8"/>
-            <ellipse cx="53" cy="53" rx="6" ry="3.5" fill="#e4c9b0" opacity="0.8"/>
-            <ellipse cx="40" cy="82" rx="22" ry="19" fill="#f0e8de" stroke="rgba(255,255,255,0.4)" stroke-width="1.5"/>
-          </svg>
-        </div>
       </div>
       <div class="logger-body">
         <div class="logger-summary">
@@ -533,23 +473,7 @@ svg.ring{width:140px;height:140px;transform:rotate(-90deg);}
           <button class="entry-add" onclick="addFood()">＋ 加入</button>
         </div>
         <ul class="log-list" id="foodList"></ul>
-        <div class="empty-bun" id="foodEmpty">
-          <svg viewBox="0 0 70 85" width="52" xmlns="http://www.w3.org/2000/svg" style="animation:floatBun 3.5s ease-in-out infinite;">
-            <ellipse cx="22" cy="14" rx="7" ry="16" fill="#eedcca" stroke="#ddd3c5" stroke-width="1.2"/>
-            <ellipse cx="48" cy="14" rx="7" ry="16" fill="#eedcca" stroke="#ddd3c5" stroke-width="1.2"/>
-            <ellipse cx="22" cy="14" rx="4" ry="11" fill="#e4c9b0"/>
-            <ellipse cx="48" cy="14" rx="4" ry="11" fill="#e4c9b0"/>
-            <circle cx="35" cy="42" r="22" fill="#eedcca" stroke="#ddd3c5" stroke-width="1.2"/>
-            <circle cx="27" cy="38" r="3" fill="#8c7b6a"/>
-            <circle cx="43" cy="38" r="3" fill="#8c7b6a"/>
-            <circle cx="28" cy="37" r="1" fill="white"/>
-            <circle cx="44" cy="37" r="1" fill="white"/>
-            <ellipse cx="35" cy="46" rx="2.5" ry="1.8" fill="#c4854a"/>
-            <path d="M30 51 Q35 56 40 51" stroke="#a0682a" stroke-width="1.2" fill="none" stroke-linecap="round"/>
-            <ellipse cx="35" cy="68" rx="18" ry="16" fill="#eedcca" stroke="#ddd3c5" stroke-width="1.2"/>
-          </svg>
-          <span>尚未記錄任何食物，開始輸入吧！</span>
-        </div>
+        <div class="empty-state" id="foodEmpty">尚未記錄任何食物，開始輸入吧</div>
         <div class="divider"></div>
         <div class="sub-label">💪 運動記錄</div>
         <div class="entry-row">
@@ -569,7 +493,7 @@ svg.ring{width:140px;height:140px;transform:rotate(-90deg);}
 
   <div id="records">
     <div class="section-header">
-      <div class="section-deco"><div class="section-title-big">每日記錄</div><em class="deco-star">✦</em><span class="leaf-deco">🌿</span></div>
+      <div class="section-deco"><div class="section-dot"></div><div class="section-title-big">每日記錄</div></div>
       <div class="section-badge">點擊展開詳情</div>
     </div>
     <div class="records-grid" id="recordsGrid"></div>
@@ -902,7 +826,7 @@ loadDayLog();
 function renderLog(){
   const fl=document.getElementById('foodList'),el=document.getElementById('exList');
   fl.innerHTML='';logFoods.forEach((f,i)=>{const li=document.createElement('li');li.className='log-item';const macroTip=(f.carb||f.protein||f.fat)?`<div class="log-macros">碳${f.carb||0}g 蛋${f.protein||0}g 脂${f.fat||0}g</div>`:'';li.innerHTML=`<div><span class="log-name">${f.name}</span>${macroTip}</div><div class="log-right"><span class="log-cal pc">${f.cal} kcal</span><button class="del-btn" onclick="rmFood(${i})">×</button></div>`;fl.appendChild(li);});
-  document.getElementById('foodEmpty').style.display=logFoods.length?'none':'flex';
+  document.getElementById('foodEmpty').style.display=logFoods.length?'none':'block';
   el.innerHTML='';logExs.forEach((e,i)=>{const li=document.createElement('li');li.className='log-item ex-item';li.innerHTML=`<span class="log-name">🏃 ${e.name}</span><div class="log-right"><span class="log-cal mc">-${e.cal} kcal</span><button class="del-btn" onclick="rmEx(${i})">×</button></div>`;el.appendChild(li);});
   document.getElementById('exEmpty').style.display=logExs.length?'none':'block';
   updateSum();
