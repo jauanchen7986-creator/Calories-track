@@ -7,24 +7,24 @@
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=Noto+Sans+KR:wght@300;400;500;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
 :root{
-  --bg:#FFF5F8;
-  --black:#261a0e;
+  --bg:#F3F8F4;
+  --black:#1E3A28;
   --white:#ffffff;
-  --pink:#FF6B9D;
-  --pink-light:#FFE4EF;
-  --mint:#4ECDC4;
-  --mint-light:#D0F5F3;
-  --yellow:#FFB830;
-  --yellow-light:#FFF3D6;
-  --purple:#C084FC;
-  --purple-light:#F3E8FF;
-  --warm:#FF8E53;
+  --pink:#4BAF88;
+  --pink-light:#C6E8D8;
+  --mint:#4BAF88;
+  --mint-light:#C6E8D8;
+  --yellow:#E0BE48;
+  --yellow-light:#FAF3C8;
+  --purple:#7AAF94;
+  --purple-light:#D4EDE1;
+  --warm:#C8963C;
   --card-bg:#FFFFFF;
-  --border:#FFD6E5;
-  --text:#2D1A2E;
-  --muted:#9B8EA0;
-  --surface:#FFF0F5;
-  --ink-mid:#5C4A6A;
+  --border:#B4D8C8;
+  --text:#1E3A28;
+  --muted:#6A9078;
+  --surface:#E8F4EC;
+  --ink-mid:#3A6048;
 }
 *{margin:0;padding:0;box-sizing:border-box;}
 body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;}
@@ -841,8 +841,8 @@ function renderCharts() {
   });
   const area = `M${xs[0]},${ys[0]} ${xs.map((x,i)=>`L${x},${ys[i]}`).join(' ')} L${xs[xs.length-1]},${H-PY} L${xs[0]},${H-PY} Z`;
   const line = `M${xs[0]},${ys[0]} ${xs.map((x,i)=>`L${x},${ys[i]}`).join(' ')}`;
-  const dots = xs.map((x, i) => `<circle cx="${x}" cy="${ys[i]}" r="5" fill="#7c4dff" stroke="white" stroke-width="2.5"><title>${days[i].date} 累積: ${pts[i].toLocaleString()} 大卡</title></circle>`).join('');
-  svg.innerHTML = `${g}<path d="${area}" fill="rgba(124,77,255,0.08)"/><path d="${line}" fill="none" stroke="#7c4dff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>${dots}`;
+  const dots = xs.map((x, i) => `<circle cx="${x}" cy="${ys[i]}" r="5" fill="#4BAF88" stroke="white" stroke-width="2.5"><title>${days[i].date} 累積: ${pts[i].toLocaleString()} 大卡</title></circle>`).join('');
+  svg.innerHTML = `${g}<path d="${area}" fill="rgba(124,77,255,0.08)"/><path d="${line}" fill="none" stroke="#4BAF88" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>${dots}`;
   labEl.innerHTML = '';
   days.forEach(d => { const e = document.createElement('div'); e.className = 'line-label'; e.textContent = d.date.split('/')[1]||d.date; labEl.appendChild(e); });
 
@@ -1076,31 +1076,43 @@ async function webSearch() {
   wsResult = null;
 
   try {
-    const url = `https://world.openfoodfacts.org/api/v2/search?search_terms=${encodeURIComponent(q)}&page_size=8&fields=product_name,brands,nutriments`;
-    const res = await fetch(url, { headers: { 'User-Agent': 'JLog-HealthTracker/1.0' } });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const data = await res.json();
+    // Try Taiwan endpoint first (more Asian food data), then world
+    const endpoints = [
+      `https://tw.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(q)}&action=process&json=1&page_size=12`,
+      `https://world.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(q)}&action=process&json=1&page_size=12`,
+    ];
+    let products = [];
+    for (const url of endpoints) {
+      try {
+        const res = await fetch(url);
+        if (!res.ok) continue;
+        const data = await res.json();
+        const list = (data.products || []).filter(p =>
+          p.product_name && p.product_name.trim() && getKcal(p.nutriments || {}) > 0
+        );
+        if (list.length > 0) { products = list; break; }
+      } catch(e2) { continue; }
+    }
 
-    const products = (data.products || []).filter(p => p.product_name && p.product_name.trim());
     if (products.length === 0) {
       document.getElementById('wsResultsList').innerHTML =
-        `<div style="color:var(--muted);font-size:13px;padding:10px 0">找不到「${q}」，建議改用英文搜尋，或使用下方手動輸入 ↓</div>`;
+        `<div class="no-result">找不到「${q}」的熱量資料<br><span style="font-size:11px;opacity:0.8">💡 建議用英文或品牌名搜尋（例如：McDonald's Big Mac），或使用下方「手動輸入」</span></div>`;
     } else {
       window._wsProducts = products;
-      document.getElementById('wsResultsList').innerHTML = products.map((p, i) => {
-        const cal = getKcal(p.nutriments);
+      document.getElementById('wsResultsList').innerHTML = products.slice(0, 8).map((p, i) => {
+        const cal = getKcal(p.nutriments || {});
         return `<div class="ws-result-item" onclick="selectWSProduct(${i})">
           <div>
             <div class="ws-result-item-name">${p.product_name}</div>
             ${p.brands ? `<div class="ws-result-item-brand">${p.brands}</div>` : ''}
           </div>
-          <div class="ws-result-item-cal">${cal > 0 ? cal + ' kcal/100g' : '熱量未知'}</div>
+          <div class="ws-result-item-cal">${cal} kcal/100g</div>
         </div>`;
       }).join('');
     }
   } catch(e) {
     document.getElementById('wsResultsList').innerHTML =
-      `<div style="color:var(--muted);font-size:13px;padding:10px 0">查詢失敗（${e.message}），請使用下方手動輸入 ↓</div>`;
+      `<div class="no-result">查詢失敗，請確認網路連線或使用下方手動輸入 ⚠️</div>`;
   } finally {
     btn.disabled = false;
     spinner.classList.remove('show');
