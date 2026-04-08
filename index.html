@@ -270,6 +270,12 @@ svg.ring{width:140px;height:140px;transform:rotate(-90deg);}
 .section-deco{display:flex;align-items:center;gap:10px;}
 .section-dot{width:8px;height:8px;border-radius:50%;background:var(--pink);flex-shrink:0;}
 .empty-state{display:flex;flex-direction:column;align-items:center;gap:6px;padding:28px 0;color:var(--muted);font-size:13px;letter-spacing:0.5px;}
+/* WEIGHT TRACKING */
+.weight-entry-row{display:flex;align-items:center;gap:10px;margin-bottom:4px;}
+.weight-hint{font-size:11px;color:var(--muted);letter-spacing:0.5px;}
+.weight-summary-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px;}
+.weight-chart-wrap{position:relative;}
+.weight-no-data{display:flex;align-items:center;justify-content:center;height:180px;color:var(--muted);font-size:13px;letter-spacing:0.5px;}
 .calc-deco{display:flex;align-items:center;gap:8px;margin-bottom:8px;}
 @media(max-width:768px){
   .hero-grid{grid-template-columns:1fr;gap:32px;}.hero-title{font-size:60px;}.hero::before{font-size:100px;}
@@ -424,6 +430,7 @@ svg.ring{width:140px;height:140px;transform:rotate(-90deg);}
     <div class="chart-tabs">
       <div class="chart-tab active" onclick="switchTab('daily',this)">📊 每日攝取 vs 赤字</div>
       <div class="chart-tab" onclick="switchTab('cumul',this)">📈 累積赤字曲線</div>
+      <div class="chart-tab" onclick="switchTab('weight',this)">⚖️ 體重趨勢</div>
     </div>
     <div class="chart-panel active" id="tab-daily">
       <div class="chart-bar-area" id="chartArea"></div>
@@ -440,6 +447,18 @@ svg.ring{width:140px;height:140px;transform:rotate(-90deg);}
         <div class="cumul-stat"><div class="cumul-stat-val" style="color:var(--pink)" id="cKg">0</div><div class="cumul-stat-label">預計減重 (公斤)</div></div>
         <div class="cumul-stat"><div class="cumul-stat-val" style="color:var(--yellow)" id="cAvg">0</div><div class="cumul-stat-label">平均日赤字</div></div>
         <div class="cumul-stat"><div class="cumul-stat-val" style="color:var(--mint)" id="cStreak">14</div><div class="cumul-stat-label">連續記錄天數</div></div>
+      </div>
+    </div>
+    <div class="chart-panel" id="tab-weight">
+      <div class="weight-summary-grid">
+        <div class="cumul-stat"><div class="cumul-stat-val" style="color:var(--yellow)" id="wStart">70.0</div><div class="cumul-stat-label">起始體重 (kg)</div></div>
+        <div class="cumul-stat"><div class="cumul-stat-val" style="color:var(--pink)" id="wCurrent">—</div><div class="cumul-stat-label">目前體重 (kg)</div></div>
+        <div class="cumul-stat"><div class="cumul-stat-val" style="color:var(--mint)" id="wLost">—</div><div class="cumul-stat-label">已減少 (kg)</div></div>
+        <div class="cumul-stat"><div class="cumul-stat-val" style="color:var(--purple)" id="wToGo">—</div><div class="cumul-stat-label">距目標 (kg)</div></div>
+      </div>
+      <div class="weight-chart-wrap">
+        <svg class="line-chart-svg" id="weightSvg" viewBox="0 0 800 200" preserveAspectRatio="none"></svg>
+        <div class="line-labels" id="weightLabels"></div>
       </div>
     </div>
   </div>
@@ -483,6 +502,13 @@ svg.ring{width:140px;height:140px;transform:rotate(-90deg);}
         </div>
         <ul class="log-list" id="exList"></ul>
         <div class="empty-msg" id="exEmpty" style="display:none">尚未記錄運動</div>
+        <div class="divider"></div>
+        <div class="sub-label">⚖️ 今日體重</div>
+        <div class="weight-entry-row">
+          <input class="entry-input" id="todayWeight" type="number" step="0.1" min="30" max="150" placeholder="輸入今日體重" style="max-width:200px"/>
+          <span style="font-family:'DM Mono';font-size:15px;color:var(--muted);font-weight:500">kg</span>
+          <span class="weight-hint">儲存時自動記錄到體重趨勢圖</span>
+        </div>
         <div class="save-row">
           <button class="clear-btn" onclick="clearLog()">清除今日</button>
           <button class="save-btn" onclick="saveLog()">💾 儲存記錄</button>
@@ -726,6 +752,87 @@ function buildChartData() {
   return Object.entries(map).sort((a, b) => a[0].localeCompare(b[0])).map(([, d]) => d);
 }
 
+// ── WEIGHT TRACKING ─────────────────────────────────────────────────────────
+const WEIGHT_START = 70.0, WEIGHT_GOAL = 60.0;
+
+function getWeightHistory() {
+  const weights = [];
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i);
+    if (!key || !key.startsWith('jlog_') || !key.endsWith('_w')) continue;
+    const dateKey = key.slice(5, -2);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(dateKey)) continue;
+    const w = parseFloat(localStorage.getItem(key));
+    if (!isNaN(w) && w > 0) weights.push({ dateKey, weight: w });
+  }
+  return weights.sort((a, b) => a.dateKey.localeCompare(b.dateKey));
+}
+
+function updateWeightSummary() {
+  const history = getWeightHistory();
+  const current = history.length ? history[history.length - 1].weight : null;
+  document.getElementById('wStart').textContent = WEIGHT_START.toFixed(1);
+  document.getElementById('wCurrent').textContent = current ? current.toFixed(1) : '—';
+  if (current !== null) {
+    const lost = WEIGHT_START - current;
+    document.getElementById('wLost').textContent = (lost > 0 ? '-' : '+') + Math.abs(lost).toFixed(1);
+    document.getElementById('wToGo').textContent = Math.max(current - WEIGHT_GOAL, 0).toFixed(1);
+  } else {
+    document.getElementById('wLost').textContent = '—';
+    document.getElementById('wToGo').textContent = '—';
+  }
+}
+
+function renderWeightChart() {
+  updateWeightSummary();
+  const history = getWeightHistory();
+  const svg = document.getElementById('weightSvg');
+  const labEl = document.getElementById('weightLabels');
+  if (!svg) return;
+
+  if (history.length === 0) {
+    svg.innerHTML = `<text x="400" y="105" text-anchor="middle" fill="#8C7A68" font-size="13" font-family="Noto Sans KR,sans-serif">尚未記錄體重 — 請在今日記錄中輸入體重並儲存</text>`;
+    labEl.innerHTML = '';
+    return;
+  }
+
+  const W = 800, H = 200, PX = 44, PY = 18;
+  const wVals = history.map(h => h.weight);
+  const minW = Math.min(...wVals, WEIGHT_GOAL) - 1;
+  const maxW = Math.max(...wVals, WEIGHT_START) + 1;
+  const toY = w => H - PY - ((w - minW) / (maxW - minW)) * (H - PY * 2);
+  const xs = history.map((_, i) => PX + i * ((W - PX * 2) / Math.max(history.length - 1, 1)));
+  const ys = history.map(h => toY(h.weight));
+
+  let g = '';
+  // Grid reference lines
+  [[WEIGHT_START,'#C8963A','起始 70kg'],[WEIGHT_GOAL,'#5BAF8C','目標 60kg']].forEach(([val,col,lbl]) => {
+    const y = toY(val);
+    g += `<line x1="${PX}" y1="${y}" x2="${W-PX}" y2="${y}" stroke="${col}" stroke-width="1.2" stroke-dasharray="5,4" opacity="0.6"/>`;
+    g += `<text x="${PX-4}" y="${y+4}" text-anchor="end" font-size="10" fill="${col}" font-family="DM Mono,monospace" opacity="0.85">${val}</text>`;
+  });
+
+  if (history.length > 1) {
+    const areaD = `M${xs[0]},${ys[0]} ${xs.map((x,i)=>`L${x},${ys[i]}`).join(' ')} L${xs[xs.length-1]},${H-PY} L${xs[0]},${H-PY} Z`;
+    const lineD = `M${xs[0]},${ys[0]} ${xs.map((x,i)=>`L${x},${ys[i]}`).join(' ')}`;
+    g += `<path d="${areaD}" fill="rgba(91,175,140,0.12)"/>`;
+    g += `<path d="${lineD}" fill="none" stroke="#5BAF8C" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>`;
+  }
+  g += xs.map((x, i) =>
+    `<circle cx="${x}" cy="${ys[i]}" r="5" fill="#5BAF8C" stroke="white" stroke-width="2.5"><title>${history[i].dateKey}: ${history[i].weight}kg</title></circle>`
+    + `<text x="${x}" y="${ys[i]-10}" text-anchor="middle" font-size="10" fill="#5BAF8C" font-family="DM Mono,monospace">${history[i].weight}</text>`
+  ).join('');
+
+  svg.innerHTML = g;
+  labEl.innerHTML = '';
+  history.forEach(h => {
+    const e = document.createElement('div'); e.className = 'line-label';
+    const dt = new Date(h.dateKey + 'T00:00:00');
+    e.textContent = `${dt.getMonth()+1}/${dt.getDate()}`;
+    labEl.appendChild(e);
+  });
+}
+
 // ── CHARTS ──────────────────────────────────────────────────────────────────
 function renderCharts() {
   const days = buildChartData();
@@ -777,11 +884,14 @@ function renderCharts() {
   document.getElementById('cAvg').textContent = Math.round(total / days.length);
 }
 renderCharts();
+updateWeightSummary();
 
 function switchTab(tab,el){
   document.querySelectorAll('.chart-tab').forEach(t=>t.classList.remove('active'));el.classList.add('active');
   document.getElementById('tab-daily').classList.toggle('active',tab==='daily');
   document.getElementById('tab-cumul').classList.toggle('active',tab==='cumul');
+  document.getElementById('tab-weight').classList.toggle('active',tab==='weight');
+  if(tab==='weight') renderWeightChart();
 }
 
 // LOGGER
@@ -803,7 +913,6 @@ function loadDayLog(){
     try{logFoods=JSON.parse(saved);logExs=JSON.parse(localStorage.getItem(k+'_ex')||'[]');}
     catch{logFoods=[];logExs=[];}
   } else {
-    // Try to load from histDays
     const match=histDays.find(d=>histDateToKey(d.date)===dateVal);
     if(match){
       logFoods=match.foods.map(f=>({name:f.n,cal:f.c}));
@@ -813,6 +922,8 @@ function loadDayLog(){
       logFoods=[];logExs=[];
     }
   }
+  const savedW=localStorage.getItem(k+'_w');
+  document.getElementById('todayWeight').value=savedW||'';
   renderLog();
 }
 
@@ -853,8 +964,14 @@ function rmFood(i){logFoods.splice(i,1);renderLog();}
 function rmEx(i){logExs.splice(i,1);renderLog();}
 function saveLog(){
   const k=`jlog_${document.getElementById('logDate').value}`;
-  try{localStorage.setItem(k,JSON.stringify(logFoods));localStorage.setItem(k+'_ex',JSON.stringify(logExs));renderRecordsGrid();renderCharts();toast('✓ 記錄已儲存！','ok');}
-  catch{toast('儲存失敗 ⚠️');}
+  const w=parseFloat(document.getElementById('todayWeight').value);
+  try{
+    localStorage.setItem(k,JSON.stringify(logFoods));
+    localStorage.setItem(k+'_ex',JSON.stringify(logExs));
+    if(!isNaN(w)&&w>0) localStorage.setItem(k+'_w',w);
+    renderRecordsGrid();renderCharts();updateWeightSummary();
+    toast('✓ 記錄已儲存！','ok');
+  }catch{toast('儲存失敗 ⚠️');}
 }
 function clearLog(){if(!confirm('確定要清除今日記錄嗎？'))return;logFoods=[];logExs=[];renderLog();toast('已清除今日記錄');}
 function addFromCalc(){
