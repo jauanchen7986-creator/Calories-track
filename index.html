@@ -27,7 +27,8 @@
   --ink-mid:#5C4A38;
 }
 *{margin:0;padding:0;box-sizing:border-box;}
-body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;}
+body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden;}
+input,button,select,textarea{max-width:100%;}
 .site-header{background:var(--black);padding:0 40px;display:flex;align-items:center;justify-content:space-between;height:60px;position:sticky;top:0;z-index:100;}
 .logo{font-family:'Caveat',cursive;font-size:26px;font-weight:700;letter-spacing:2px;color:var(--white);}
 .logo span{color:var(--pink);}
@@ -279,11 +280,37 @@ svg.ring{width:140px;height:140px;transform:rotate(-90deg);}
 .calc-deco{display:flex;align-items:center;gap:8px;margin-bottom:8px;}
 @media(max-width:768px){
   .hero-grid{grid-template-columns:1fr;gap:32px;}.hero-title{font-size:60px;}.hero::before{font-size:100px;}
-  .calc-section{padding:0 20px;}.calc-card{padding:24px 20px;}.main{padding:32px 20px;}.site-header{padding:0 20px;}
+  .calc-section{padding:0 16px;}.calc-card{padding:20px 16px;}.main{padding:28px 16px;}.site-header{padding:0 16px;}
   .day-header{grid-template-columns:80px 1fr auto;gap:10px;}.detail-cols{grid-template-columns:1fr;}
-  .hero{padding:40px 20px 60px;}.logger-summary,.cumul-stats{grid-template-columns:repeat(2,1fr);}
-  .logger-body{padding:20px;}.logger-header{padding:20px;flex-direction:column;gap:12px;align-items:flex-start;}
+  .hero{padding:40px 16px 60px;}.logger-summary,.cumul-stats,.weight-summary-grid{grid-template-columns:repeat(2,1fr);}
+  .logger-body{padding:16px;}.logger-header{padding:16px;flex-direction:column;gap:12px;align-items:flex-start;}
   .entry-row{flex-wrap:wrap;}
+  /* Fix input rows overflowing on mobile */
+  .calc-input-row{flex-wrap:wrap;}
+  .calc-input-row .calc-input{width:100%;flex:1 1 100%;}
+  .calc-input-row .calc-btn{width:100%;flex:1 1 100%;}
+  .ws-input-row{flex-wrap:wrap;}
+  .ws-input-row .ws-input{width:100%;flex:1 1 100%;}
+  .ws-input-row .ws-btn{width:100%;flex:1 1 100%;}
+  .apikey-row{flex-wrap:wrap;}
+  .apikey-row .apikey-input{width:100%;flex:1 1 100%;}
+  .apikey-row .apikey-save-btn{width:100%;}
+  .ws-manual-row{flex-direction:column;}
+  .ws-manual-row .ws-manual-input{width:100%;min-width:unset;}
+  .weight-entry-row{flex-wrap:wrap;}
+  .weight-entry-row .entry-input{width:100%;max-width:100% !important;flex:1 1 100%;}
+  .weight-entry-row .weight-hint{width:100%;}
+  .save-row{flex-direction:column;}
+  .save-row .save-btn,.save-row .clear-btn{width:100%;}
+  .nav-links{display:none;}
+  .nav-tag{font-size:9px;padding:4px 8px;}
+  .chart-tabs{flex-wrap:wrap;gap:6px;}
+  .chart-tab{font-size:11px;padding:6px 14px;}
+  .ws-action-row{flex-direction:column;}
+  .ws-action-row button{width:100%;}
+  .day-header{grid-template-columns:70px 1fr auto;}
+  .day-pills{gap:6px;}
+  .pill{padding:6px 10px;font-size:11px;}
 }
 </style>
 </head>
@@ -342,7 +369,7 @@ svg.ring{width:140px;height:140px;transform:rotate(-90deg);}
     </div>
     <div class="calc-input-row">
       <input class="calc-input" id="foodInput" placeholder="搜尋食物名稱，例如：雞胸肉、拿鐵、牛排…" oninput="onSearchInput()" onkeydown="onSearchKey(event)"/>
-      <button class="calc-btn" onclick="doSearch()">查詢 →</button>
+      <button class="calc-btn" onclick="doSearch()">🔎 查詢</button>
     </div>
     <div class="search-dropdown" id="searchDrop"></div>
     <div class="calc-result" id="calcResult">
@@ -360,7 +387,7 @@ svg.ring{width:140px;height:140px;transform:rotate(-90deg);}
         <button class="portion-chip" data-mult="2" onclick="setPortionCalc(2)">2 份</button>
         <button class="portion-chip" data-mult="3" onclick="setPortionCalc(3)">3 份</button>
       </div>
-      <button class="ai-add-btn" onclick="addFromCalc()">＋ 加入今日記錄</button>
+      <button class="ai-add-btn" onclick="addFromCalc()">✚ 加入今日記錄</button>
     </div>
 
     <div class="search-section-divider"></div>
@@ -369,7 +396,7 @@ svg.ring{width:140px;height:140px;transform:rotate(-90deg);}
 
     <div class="ws-input-row">
       <input class="ws-input" id="wsInput" placeholder="輸入食物名稱，例如：麥當勞大麥克、可口可樂、燕麥棒…" onkeydown="if(event.key==='Enter')webSearch()"/>
-      <button class="ws-btn" id="wsBtn" onclick="webSearch()">🔍 查詢</button>
+      <button class="ws-btn" id="wsBtn" onclick="webSearch()">🌐 線上查詢</button>
     </div>
 
     <div class="ws-searching" id="wsSearching">
@@ -394,8 +421,8 @@ svg.ring{width:140px;height:140px;transform:rotate(-90deg);}
         <button class="portion-chip ws-pc" data-mult="3" onclick="setPortionWS(3)">3 份</button>
       </div>
       <div class="ws-action-row">
-        <button class="ws-add-btn" onclick="addFromWS()">＋ 加入今日記錄</button>
-        <button class="ws-save-db-btn" onclick="saveToCustomDB()">📌 加入我的食物資料庫</button>
+        <button class="ws-add-btn" onclick="addFromWS()">✚ 加入今日記錄</button>
+        <button class="ws-save-db-btn" onclick="saveToCustomDB()">📌 存入我的資料庫</button>
       </div>
     </div>
 
@@ -409,8 +436,8 @@ svg.ring{width:140px;height:140px;transform:rotate(-90deg);}
         <input class="ws-manual-input" id="manFat" placeholder="脂肪(g)" type="number" min="0"/>
       </div>
       <div class="ws-action-row">
-        <button class="ws-add-btn" onclick="addManual()">＋ 加入今日記錄</button>
-        <button class="ws-save-db-btn" onclick="saveManualToDB()">📌 加入我的食物資料庫</button>
+        <button class="ws-add-btn" onclick="addManual()">✚ 加入今日記錄</button>
+        <button class="ws-save-db-btn" onclick="saveManualToDB()">📌 存入我的資料庫</button>
       </div>
     </div>
 
@@ -488,8 +515,8 @@ svg.ring{width:140px;height:140px;transform:rotate(-90deg);}
         <div class="entry-row">
           <input class="entry-input" id="fName" placeholder="食物名稱（輸入後可用AI查熱量）" onkeydown="if(event.key==='Enter')document.getElementById('fCal').focus()"/>
           <input class="entry-cal" id="fCal" placeholder="大卡" type="number" min="0" onkeydown="if(event.key==='Enter')addFood()"/>
-          <button class="entry-ai" onclick="aiForFood()">🔍 查熱量</button>
-          <button class="entry-add" onclick="addFood()">＋ 加入</button>
+          <button class="entry-ai" onclick="aiForFood()">🔎 查熱量</button>
+          <button class="entry-add" onclick="addFood()">✚ 加入</button>
         </div>
         <ul class="log-list" id="foodList"></ul>
         <div class="empty-state" id="foodEmpty">尚未記錄任何食物，開始輸入吧</div>
@@ -498,7 +525,7 @@ svg.ring{width:140px;height:140px;transform:rotate(-90deg);}
         <div class="entry-row">
           <input class="entry-input" id="eName" placeholder="運動名稱（例如：爬坡 20分鐘）" onkeydown="if(event.key==='Enter')document.getElementById('eCal').focus()"/>
           <input class="entry-cal" id="eCal" placeholder="消耗" type="number" min="0" onkeydown="if(event.key==='Enter')addEx()"/>
-          <button class="entry-add mint" onclick="addEx()">＋ 加入</button>
+          <button class="entry-add mint" onclick="addEx()">✚ 加入</button>
         </div>
         <ul class="log-list" id="exList"></ul>
         <div class="empty-msg" id="exEmpty" style="display:none">尚未記錄運動</div>
@@ -510,7 +537,7 @@ svg.ring{width:140px;height:140px;transform:rotate(-90deg);}
           <span class="weight-hint">儲存時自動記錄到體重趨勢圖</span>
         </div>
         <div class="save-row">
-          <button class="clear-btn" onclick="clearLog()">清除今日</button>
+          <button class="clear-btn" onclick="clearLog()">🗑 清除今日</button>
           <button class="save-btn" onclick="saveLog()">💾 儲存記錄</button>
         </div>
       </div>
