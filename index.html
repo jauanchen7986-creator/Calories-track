@@ -278,6 +278,18 @@ svg.ring{width:140px;height:140px;transform:rotate(-90deg);}
 .weight-chart-wrap{position:relative;}
 .weight-no-data{display:flex;align-items:center;justify-content:center;height:180px;color:var(--muted);font-size:13px;letter-spacing:0.5px;}
 .calc-deco{display:flex;align-items:center;gap:8px;margin-bottom:8px;}
+/* MACRO GOALS PANEL */
+.macro-goals{background:var(--surface);border-radius:14px;padding:16px 18px;border:1px solid var(--border);margin-top:16px;}
+.mg-header{display:flex;align-items:center;gap:8px;margin-bottom:14px;}
+.mg-title{font-size:11px;letter-spacing:2px;color:var(--muted);font-weight:700;}
+.mg-train-badge{background:var(--yellow-light);color:var(--warm);font-size:10px;padding:3px 9px;border-radius:100px;font-weight:700;letter-spacing:1px;}
+.macro-goal-row{margin-bottom:10px;}
+.macro-goal-top{display:flex;justify-content:space-between;align-items:center;font-size:12px;margin-bottom:5px;}
+.mg-status{font-size:10px;font-weight:700;padding:2px 8px;border-radius:100px;letter-spacing:.5px;white-space:nowrap;}
+.mgs-ok{background:#D4EBEA;color:#3A7875;}
+.mgs-low{background:var(--yellow-light);color:var(--warm);}
+.mgs-over{background:var(--pink-light);color:#B04030;}
+.mg-train-tip{background:var(--yellow-light);border-left:3px solid var(--warm);border-radius:0 8px 8px 0;padding:10px 12px;margin-top:10px;font-size:12px;color:var(--ink-mid);line-height:1.6;}
 @media(max-width:768px){
   .hero-grid{grid-template-columns:1fr;gap:32px;}.hero-title{font-size:60px;}.hero::before{font-size:100px;}
   .calc-section{padding:0 16px;}.calc-card{padding:20px 16px;}.main{padding:28px 16px;}.site-header{padding:0 16px;}
@@ -529,6 +541,7 @@ svg.ring{width:140px;height:140px;transform:rotate(-90deg);}
         </div>
         <ul class="log-list" id="exList"></ul>
         <div class="empty-msg" id="exEmpty" style="display:none">尚未記錄運動</div>
+        <div class="macro-goals" id="macroPanelLive" style="display:none"></div>
         <div class="divider"></div>
         <div class="sub-label">⚖️ 今日體重</div>
         <div class="weight-entry-row">
@@ -750,6 +763,67 @@ const histDays=[
 ];
 
 const BMR=1411,GOAL=1300;
+// Macro daily goals (g)
+const MACRO_STD   = {protein:100, carb:130, fat:43};   // 一般日
+const MACRO_TRAIN = {protein:130, carb:150, fat:43};   // 重訓日 +30g蛋白質
+const TRAIN_KW    = ['重訓','臀腿','上半身','深蹲','硬舉','胸肌','背肌','肩膀','二頭','三頭','胸背','健身'];
+
+function detectTraining(exs) {
+  return exs.some(e => TRAIN_KW.some(k => ((e.name||e.n||'').includes(k))));
+}
+
+function renderMacroRows(carb, protein, fat, exs) {
+  const training = detectTraining(exs||[]);
+  const g = training ? MACRO_TRAIN : MACRO_STD;
+  const rows = [
+    {l:'蛋白質', v:protein, goal:g.protein, c:'mfp'},
+    {l:'碳水',   v:carb,    goal:g.carb,    c:'mfc'},
+    {l:'脂肪',   v:fat,     goal:g.fat,     c:'mff'},
+  ];
+  const extra = g.protein - MACRO_STD.protein;
+  const macroHTML = rows.map(r => {
+    const pct = Math.min(r.v/r.goal*100,100);
+    const diff = r.goal - r.v;
+    let sc='', st='';
+    if (r.v > 0 || r.goal) {
+      if (r.v >= r.goal)            { sc='mgs-ok';  st='✓ 達標'; }
+      else if (diff <= 20)          { sc='mgs-low'; st=`差 ${diff}g`; }
+      else                          { sc='mgs-low'; st=`差 ${diff}g`; }
+      if (r.v > r.goal * 1.15)     { sc='mgs-over'; st=`超 +${r.v-r.goal}g`; }
+    }
+    return `<div class="macro-row-item">
+      <div class="macro-top">
+        <span class="macro-n">${r.l}</span>
+        <div style="display:flex;gap:5px;align-items:center">
+          <span class="macro-v">${r.v}g<span style="font-family:'DM Mono';font-size:10px;color:var(--muted);font-weight:400"> / ${r.goal}g</span></span>
+          ${st?`<span class="mg-status ${sc}">${st}</span>`:''}
+        </div>
+      </div>
+      <div class="macro-track"><div class="macro-fill ${r.c}" style="width:${pct}%"></div></div>
+    </div>`;
+  }).join('');
+  const trainTip = training && extra > 0
+    ? `<div class="mg-train-tip">💪 重訓日蛋白質目標提升至 <strong>${g.protein}g</strong>（+${extra}g），有助肌肉修復合成。</div>`
+    : '';
+  return `<div class="mg-header">
+      <span class="mg-title">📊 三大營養素</span>
+      ${training?'<span class="mg-train-badge">🏋️ 重訓日</span>':''}
+    </div>
+    ${macroHTML}
+    ${trainTip}`;
+}
+
+function updateMacroPanel() {
+  const el = document.getElementById('macroPanelLive');
+  if (!el) return;
+  const hasMacros = logFoods.some(f => f.carb||f.protein||f.fat);
+  if (!logFoods.length && !hasMacros) { el.style.display='none'; return; }
+  const carb    = logFoods.reduce((s,f)=>s+(f.carb||0),0);
+  const protein = logFoods.reduce((s,f)=>s+(f.protein||0),0);
+  const fat     = logFoods.reduce((s,f)=>s+(f.fat||0),0);
+  el.style.display = 'block';
+  el.innerHTML = renderMacroRows(carb, protein, fat, logExs);
+}
 
 // ── BUILD MERGED CHART DATA (histDays + localStorage) ───────────────────────
 function buildChartData() {
@@ -968,6 +1042,7 @@ function renderLog(){
   el.innerHTML='';logExs.forEach((e,i)=>{const li=document.createElement('li');li.className='log-item ex-item';li.innerHTML=`<span class="log-name">🏃 ${e.name}</span><div class="log-right"><span class="log-cal mc">-${e.cal} kcal</span><button class="del-btn" onclick="rmEx(${i})">×</button></div>`;el.appendChild(li);});
   document.getElementById('exEmpty').style.display=logExs.length?'none':'block';
   updateSum();
+  updateMacroPanel();
 }
 function updateSum(){
   const ti=logFoods.reduce((s,f)=>s+f.cal,0),te=logExs.reduce((s,e)=>s+e.cal,0);
@@ -1014,6 +1089,7 @@ function addFromCalc(){
 // RECORDS
 function buildDayCard(d, dateKey) {
   const ok = d.intake <= GOAL;
+  const isTrain = detectTraining(d.exs||[]);
   const card = document.createElement('div');
   card.className = 'day-card';
   card.innerHTML = `<div class="day-header" onclick="this.parentElement.classList.toggle('open')">
@@ -1022,6 +1098,7 @@ function buildDayCard(d, dateKey) {
       <div class="pill pp"><span class="pill-v">🔥 ${d.intake}</span><span style="font-size:10px;opacity:.7"> kcal</span></div>
       <div class="pill mp"><span class="pill-v">⚡ -${d.deficit}</span><span style="font-size:10px;opacity:.7"> 赤字</span></div>
       ${d.exercise > 0 ? `<div class="pill yp"><span class="pill-v">🏃 -${d.exercise}</span></div>` : ''}
+      ${isTrain ? '<div class="pill" style="background:var(--yellow-light);color:var(--warm)">🏋️ 重訓</div>' : ''}
       ${ok ? '<div class="pill mp">✓ 達標</div>' : '<div class="pill pp">↑ 超標</div>'}
       <div class="pill" style="background:var(--purple-light);color:var(--purple);cursor:pointer" onclick="event.stopPropagation();editDay('${dateKey}')">✏️ 編輯</div>
     </div><div class="day-chev">▾</div>
@@ -1035,9 +1112,7 @@ function buildDayCard(d, dateKey) {
       </div>
       <div class="detail-block"><h5>💪 運動記錄</h5>
         ${d.exs.length ? d.exs.map(e => `<div class="e-row"><div class="e-dot"></div><span>${e.n}</span><span class="e-cal">-${e.c} kcal</span></div>`).join('') : '<div style="color:var(--muted);font-size:13px;padding:8px 0">休息日</div>'}
-        <div class="macro-rows" style="margin-top:16px"><h5>📊 三大營養素</h5>
-          ${[{l:'碳水',v:d.carb,m:150,c:'mfc'},{l:'蛋白質',v:d.protein,m:130,c:'mfp'},{l:'脂肪',v:d.fat,m:60,c:'mff'}].map(x => `<div class="macro-row-item"><div class="macro-top"><span class="macro-n">${x.l}</span><span class="macro-v">${x.v}g</span></div><div class="macro-track"><div class="macro-fill ${x.c}" style="width:${Math.min(x.v / x.m * 100, 100)}%"></div></div></div>`).join('')}
-        </div>
+        ${(d.carb||d.protein||d.fat) ? `<div class="macro-goals" style="margin-top:16px">${renderMacroRows(d.carb||0, d.protein||0, d.fat||0, d.exs)}</div>` : ''}
       </div>
     </div>
   </div>`;
