@@ -940,7 +940,7 @@ function calcWeekScore(days, proteinGoalDays) {
     Math.round((n/7)*30) +
     Math.round((underDays/n)*25) +
     Math.round((proteinGoalDays/n)*25) +
-    Math.round((exDays/n)*20), 100);
+    Math.round((Math.min(exDays,4)/4)*20), 100);
 }
 
 function generateWeeklyReport(mondayKey) {
