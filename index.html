@@ -932,14 +932,15 @@ function getReportMondayKey(offset) {
   return baseMon.toISOString().slice(0,10);
 }
 
-function calcWeekScore(days, proteinGoalDays) {
-  const n = days.length;
+function calcWeekScore(days) {
+  const n          = days.length;
   const underDays  = days.filter(d=>d.intake<=GOAL).length;
   const exDays     = days.filter(d=>d.exercise>0).length;
+  const avgProtein = days.reduce((s,d)=>s+d.protein,0) / n;
   return Math.min(
     Math.round((n/7)*30) +
     Math.round((underDays/n)*25) +
-    Math.round((proteinGoalDays/n)*25) +
+    Math.min(Math.round((avgProtein/MACRO_STD.protein)*25), 25) +
     Math.round((Math.min(exDays,4)/4)*20), 100);
 }
 
@@ -972,7 +973,7 @@ function generateWeeklyReport(mondayKey) {
   const proteinGoalDays = days.filter(d=>d.protein>=(detectTraining(d.exs)?MACRO_TRAIN.protein:MACRO_STD.protein)).length;
   const underGoalDays = days.filter(d=>d.intake<=GOAL).length;
   const exDays = days.filter(d=>d.exercise>0).length;
-  const score  = calcWeekScore(days, proteinGoalDays);
+  const score  = calcWeekScore(days);
 
   // Weight
   const allW = getWeightHistory().filter(w=>w.dateKey>=mondayKey && w.dateKey<=sunKey);
