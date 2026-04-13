@@ -290,14 +290,54 @@ svg.ring{width:140px;height:140px;transform:rotate(-90deg);}
 .mgs-low{background:var(--yellow-light);color:var(--warm);}
 .mgs-over{background:var(--pink-light);color:#B04030;}
 .mg-train-tip{background:var(--yellow-light);border-left:3px solid var(--warm);border-radius:0 8px 8px 0;padding:10px 12px;margin-top:10px;font-size:12px;color:var(--ink-mid);line-height:1.6;}
+/* WEEKLY REPORT */
+.report-card{background:var(--card-bg);border-radius:24px;padding:32px;border:1px solid var(--border);box-shadow:0 4px 24px rgba(44,36,36,0.07);}
+.report-head{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:24px;flex-wrap:wrap;gap:12px;}
+.report-week-title{font-family:'Gaegu',sans-serif;font-size:34px;font-weight:700;color:var(--black);line-height:1;}
+.report-meta{font-size:11px;color:var(--muted);letter-spacing:1px;margin-top:6px;}
+.report-email-btn{background:var(--surface);border:1.5px solid var(--border);border-radius:100px;padding:10px 20px;font-size:12px;font-weight:700;cursor:pointer;color:var(--muted);transition:all 0.2s;white-space:nowrap;font-family:'Noto Sans KR',sans-serif;}
+.report-email-btn:hover{border-color:var(--pink);color:var(--pink);}
+.report-score-row{display:flex;align-items:center;gap:20px;background:var(--surface);border-radius:16px;padding:20px 24px;border:1px solid var(--border);margin-bottom:20px;}
+.score-ring-wrap{position:relative;width:80px;height:80px;flex-shrink:0;}
+svg.score-ring{width:80px;height:80px;transform:rotate(-90deg);}
+.score-ring-bg{fill:none;stroke:var(--border);stroke-width:8;}
+.score-ring-fill{fill:none;stroke-width:8;stroke-linecap:round;stroke-dasharray:220;}
+.score-ring-text{position:absolute;top:0;left:0;width:80px;height:80px;display:flex;flex-direction:column;align-items:center;justify-content:center;}
+.score-num{font-family:'Gaegu',sans-serif;font-size:26px;line-height:1;color:var(--black);}
+.score-pts{font-size:9px;color:var(--muted);letter-spacing:1px;}
+.score-right{flex:1;}
+.score-grade{font-size:15px;font-weight:700;color:var(--black);margin-bottom:4px;}
+.score-desc{font-size:12px;color:var(--muted);line-height:1.7;}
+.report-kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px;}
+.rkpi{background:var(--surface);border-radius:14px;padding:16px;text-align:center;border:1px solid var(--border);}
+.rkpi-val{font-family:'Gaegu',sans-serif;font-size:26px;line-height:1;margin-bottom:4px;}
+.rkpi-label{font-size:10px;color:var(--muted);letter-spacing:1px;}
+.report-cols{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;}
+.report-section{background:var(--surface);border-radius:14px;padding:18px 20px;border:1px solid var(--border);}
+.report-section-title{font-size:11px;letter-spacing:2px;font-weight:700;color:var(--pink);margin-bottom:14px;}
+.rrow{display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid rgba(0,0,0,0.04);font-size:13px;}
+.rrow:last-child{border-bottom:none;}
+.rrow-label{color:var(--muted);}
+.rrow-val{font-family:'DM Mono';font-weight:500;font-size:12px;}
+.rrow-badge{font-size:10px;font-weight:700;padding:2px 7px;border-radius:100px;}
+.rb-ok{background:#D4EBEA;color:#3A7875;}.rb-warn{background:var(--yellow-light);color:var(--warm);}.rb-bad{background:var(--pink-light);color:#B04030;}
+.report-tips-box{background:var(--surface);border-radius:14px;padding:18px 20px;border:1px solid var(--border);}
+.report-tips-title{font-size:11px;letter-spacing:2px;font-weight:700;color:var(--mint);margin-bottom:14px;}
+.rtip{display:flex;gap:10px;padding:8px 0;border-bottom:1px solid rgba(0,0,0,0.04);font-size:13px;align-items:flex-start;line-height:1.5;}
+.rtip:last-child{border-bottom:none;}
+.rtip-dot{flex-shrink:0;width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;margin-top:1px;}
+.rtip-ok{background:#D4EBEA;}.rtip-warn{background:var(--yellow-light);}.rtip-bad{background:var(--pink-light);}
+.report-no-data{text-align:center;padding:48px 24px;color:var(--muted);}
 @media(max-width:768px){
+  .report-kpis,.report-cols{grid-template-columns:1fr 1fr;}
+  .report-card{padding:20px 16px;}
+  .report-score-row{flex-direction:column;align-items:flex-start;gap:14px;}
   .hero-grid{grid-template-columns:1fr;gap:32px;}.hero-title{font-size:60px;}.hero::before{font-size:100px;}
   .calc-section{padding:0 16px;}.calc-card{padding:20px 16px;}.main{padding:28px 16px;}.site-header{padding:0 16px;}
   .day-header{grid-template-columns:80px 1fr auto;gap:10px;}.detail-cols{grid-template-columns:1fr;}
   .hero{padding:40px 16px 60px;}.logger-summary,.cumul-stats,.weight-summary-grid{grid-template-columns:repeat(2,1fr);}
   .logger-body{padding:16px;}.logger-header{padding:16px;flex-direction:column;gap:12px;align-items:flex-start;}
   .entry-row{flex-wrap:wrap;}
-  /* Fix input rows overflowing on mobile */
   .calc-input-row{flex-wrap:wrap;}
   .calc-input-row .calc-input{width:100%;flex:1 1 100%;}
   .calc-input-row .calc-btn{width:100%;flex:1 1 100%;}
@@ -332,6 +372,7 @@ svg.ring{width:140px;height:140px;transform:rotate(-90deg);}
   <div style="display:flex;align-items:center;gap:16px">
     <div class="nav-links">
       <div class="nav-link" onclick="scrollTo({top:0,behavior:'smooth'})">概覽</div>
+      <div class="nav-link" onclick="document.getElementById('weekly-report').scrollIntoView({behavior:'smooth'})">週報</div>
       <div class="nav-link" onclick="document.getElementById('logger').scrollIntoView({behavior:'smooth'})">記錄</div>
       <div class="nav-link" onclick="document.getElementById('records').scrollIntoView({behavior:'smooth'})">歷史</div>
     </div>
@@ -502,8 +543,18 @@ svg.ring{width:140px;height:140px;transform:rotate(-90deg);}
     </div>
   </div>
 
+  <div id="weekly-report">
+    <div class="section-header" style="margin-top:48px">
+      <div class="section-deco"><div class="section-dot"></div><div class="section-title-big">每週健康報告</div></div>
+      <div class="section-badge" id="reportBadge">每週日自動生成</div>
+    </div>
+    <div class="report-card" id="reportCard">
+      <div class="report-no-data">載入中…</div>
+    </div>
+  </div>
+
   <div id="logger">
-    <div class="section-header">
+    <div class="section-header" style="margin-top:48px">
       <div class="section-deco"><div class="section-dot"></div><div class="section-title-big">今日記錄</div></div>
       <div class="section-badge">手動輸入飲食 · 自動計算</div>
     </div>
@@ -825,6 +876,268 @@ function updateMacroPanel() {
   el.innerHTML = renderMacroRows(carb, protein, fat, logExs);
 }
 
+// ── WEEKLY REPORT ─────────────────────────────────────────────────────────
+function buildFullDayData() {
+  const map = {};
+  histDays.forEach(d => {
+    const parts = d.date.split('/');
+    const key = `2026-${String(parts[0]).padStart(2,'0')}-${String(parts[1]).padStart(2,'0')}`;
+    map[key] = { dateKey:key, date:d.date, wd:d.wd, intake:d.intake, exercise:d.exercise||0, deficit:d.deficit,
+                 carb:d.carb||0, protein:d.protein||0, fat:d.fat||0, exs:d.exs||[] };
+  });
+  for (let i = 0; i < localStorage.length; i++) {
+    const lsKey = localStorage.key(i);
+    if (!lsKey?.startsWith('jlog_') || lsKey.endsWith('_ex') || lsKey.endsWith('_w')) continue;
+    const dateKey = lsKey.replace('jlog_','');
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(dateKey)) continue;
+    try {
+      const foods = JSON.parse(localStorage.getItem(lsKey)||'[]');
+      const exs   = JSON.parse(localStorage.getItem(lsKey+'_ex')||'[]');
+      if (!foods.length && !exs.length) continue;
+      const intake   = foods.reduce((s,f)=>s+f.cal,0);
+      const exercise = exs.reduce((s,e)=>s+e.cal,0);
+      const existing = map[dateKey]||{};
+      map[dateKey] = { dateKey, date:existing.date||dateKey.slice(5), intake, exercise,
+                       deficit: BMR+exercise-intake,
+                       carb:    foods.reduce((s,f)=>s+(f.carb||0),0)||existing.carb||0,
+                       protein: foods.reduce((s,f)=>s+(f.protein||0),0)||existing.protein||0,
+                       fat:     foods.reduce((s,f)=>s+(f.fat||0),0)||existing.fat||0,
+                       exs };
+    } catch {}
+  }
+  return Object.entries(map).sort((a,b)=>a[0].localeCompare(b[0])).map(([,d])=>d);
+}
+
+function getWeekOf(dateKey) {
+  const dt = new Date(dateKey+'T00:00:00');
+  const day = dt.getDay(); // 0=Sun
+  const diff = day===0 ? -6 : 1-day; // shift to Monday
+  const mon = new Date(dt); mon.setDate(dt.getDate()+diff);
+  return mon.toISOString().slice(0,10);
+}
+
+function calcWeekScore(days, proteinGoalDays) {
+  const n = days.length;
+  const underDays  = days.filter(d=>d.intake<=GOAL).length;
+  const exDays     = days.filter(d=>d.exercise>0).length;
+  const consistency = Math.round((n/7)*30);
+  const calControl  = Math.round((underDays/n)*25);
+  const proteinPts  = Math.round((proteinGoalDays/n)*25);
+  const exercisePts = Math.round((exDays/n)*20);
+  return Math.min(consistency+calControl+proteinPts+exercisePts, 100);
+}
+
+function generateWeeklyReport() {
+  const allDays = buildFullDayData();
+  if (!allDays.length) return null;
+
+  // Group by week (Mon key)
+  const weeks = {};
+  allDays.forEach(d => {
+    const monKey = getWeekOf(d.dateKey);
+    if (!weeks[monKey]) weeks[monKey] = [];
+    weeks[monKey].push(d);
+  });
+
+  // Most recent week with data
+  const sortedKeys = Object.keys(weeks).sort();
+  const latestKey  = sortedKeys[sortedKeys.length-1];
+  const days       = weeks[latestKey];
+
+  const n           = days.length;
+  const avgIntake   = Math.round(days.reduce((s,d)=>s+d.intake,0)/n);
+  const avgDeficit  = Math.round(days.reduce((s,d)=>s+d.deficit,0)/n);
+  const avgExercise = Math.round(days.reduce((s,d)=>s+d.exercise,0)/n);
+  const avgProtein  = Math.round(days.reduce((s,d)=>s+d.protein,0)/n);
+  const avgCarb     = Math.round(days.reduce((s,d)=>s+d.carb,0)/n);
+  const avgFat      = Math.round(days.reduce((s,d)=>s+d.fat,0)/n);
+  const trainDays   = days.filter(d=>detectTraining(d.exs)).length;
+  const proteinGoalDays = days.filter(d=>{
+    const g = detectTraining(d.exs) ? MACRO_TRAIN.protein : MACRO_STD.protein;
+    return d.protein >= g;
+  }).length;
+  const underGoalDays = days.filter(d=>d.intake<=GOAL).length;
+  const exDays        = days.filter(d=>d.exercise>0).length;
+  const score         = calcWeekScore(days, proteinGoalDays);
+
+  // Week date range string
+  const mon = new Date(latestKey+'T00:00:00');
+  const sun = new Date(mon); sun.setDate(mon.getDate()+6);
+  const fmt = d=>`${d.getMonth()+1}/${d.getDate()}`;
+  const weekRange = `${fmt(mon)} — ${fmt(sun)}`;
+
+  // Weight data for this week
+  const weights = getWeightHistory().filter(w=>w.dateKey>=days[0].dateKey && w.dateKey<=days[days.length-1].dateKey);
+  let weightTrend = null;
+  if (weights.length>=2) {
+    const diff = (weights[weights.length-1].weight - weights[0].weight).toFixed(1);
+    weightTrend = { start:weights[0].weight, end:weights[weights.length-1].weight, diff };
+  }
+
+  // Tips
+  const tips = [];
+  if (n < 5) tips.push({type:'warn', icon:'📅', text:`本週只記錄了 ${n} 天，建議每天記錄更準確`});
+  else        tips.push({type:'ok',   icon:'✓',  text:`本週連續記錄 ${n} 天，習慣養成中！`});
+
+  if (avgProtein >= 100) tips.push({type:'ok',   icon:'✓',  text:`平均蛋白質 ${avgProtein}g，達標！肌肉保護良好`});
+  else                   tips.push({type:'warn',  icon:'↑',  text:`平均蛋白質 ${avgProtein}g 偏低（目標100g），多補充雞胸肉、豆乾、高蛋白飲品`});
+
+  if (avgIntake <= GOAL)  tips.push({type:'ok',   icon:'✓',  text:`平均攝取 ${avgIntake} kcal，在目標 ${GOAL} kcal 範圍內`});
+  else                    tips.push({type:'bad',   icon:'!',  text:`平均攝取 ${avgIntake} kcal，超出目標 ${avgIntake-GOAL} kcal，注意份量`});
+
+  if (avgDeficit >= 250)  tips.push({type:'ok',   icon:'✓',  text:`平均赤字 ${avgDeficit} kcal，本週減重進度良好`});
+  else if (avgDeficit>=150) tips.push({type:'warn',icon:'↑', text:`平均赤字 ${avgDeficit} kcal，可以增加一點運動量`});
+  else                    tips.push({type:'bad',   icon:'!',  text:`平均赤字 ${avgDeficit} kcal 過低，建議增加運動或減少攝取`});
+
+  if (trainDays > 0)      tips.push({type:'ok',   icon:'💪', text:`本週重訓 ${trainDays} 次！蛋白質目標已自動調高，繼續保持`});
+  if (avgCarb > 150)      tips.push({type:'warn',  icon:'↓',  text:`碳水平均 ${avgCarb}g 偏高，注意精緻澱粉與含糖飲料`});
+  if (exDays === 0)       tips.push({type:'bad',   icon:'!',  text:'本週沒有運動記錄，建議每週至少3次有氧或重訓'});
+
+  return { weekRange, n, avgIntake, avgDeficit, avgExercise, avgProtein, avgCarb, avgFat,
+           trainDays, proteinGoalDays, underGoalDays, exDays, score, tips, weightTrend, days };
+}
+
+function renderWeeklyReport() {
+  const card = document.getElementById('reportCard');
+  const badge = document.getElementById('reportBadge');
+  if (!card) return;
+
+  const r = generateWeeklyReport();
+  if (!r) {
+    card.innerHTML = '<div class="report-no-data" style="font-size:14px;color:var(--muted)">尚無足夠數據生成報告，請先記錄至少一週的飲食。</div>';
+    return;
+  }
+
+  // Sunday check
+  const today = new Date();
+  const isSunday = today.getDay() === 0;
+  if (badge) badge.textContent = isSunday ? `${today.getMonth()+1}/${today.getDate()} 今日生成 ✓` : '每週日自動生成';
+
+  // Score ring
+  const scoreOffset = 220 - (r.score/100)*220;
+  const scoreColor = r.score>=85?'var(--mint)':r.score>=65?'var(--yellow)':'var(--pink)';
+  const grade = r.score>=85?'🌟 優秀':r.score>=70?'👍 良好':r.score>=55?'💪 加油':'📈 需改善';
+  const gradeDesc = r.score>=85?'本週飲食均衡、運動穩定，繼續保持！'
+                  : r.score>=70?'整體表現良好，小細節再加強就更完美了'
+                  : r.score>=55?'有在努力！調整蛋白質攝取和運動頻率'
+                  : '本週記錄不足或攝取失衡，加油！';
+
+  // Weight trend block
+  let weightBlock = '';
+  if (r.weightTrend) {
+    const diff = parseFloat(r.weightTrend.diff);
+    const wClass = diff<0?'rb-ok':diff>0?'rb-bad':'rb-warn';
+    const wText  = diff<0?`↓ ${Math.abs(diff)}kg`:`${diff>0?'↑':'-'} ${Math.abs(diff)}kg`;
+    weightBlock = `
+      <div class="rrow"><span class="rrow-label">週初體重</span><span class="rrow-val">${r.weightTrend.start} kg</span></div>
+      <div class="rrow"><span class="rrow-label">週末體重</span><span class="rrow-val">${r.weightTrend.end} kg</span></div>
+      <div class="rrow"><span class="rrow-label">本週變化</span><span class="rrow-badge ${wClass}">${wText}</span></div>
+      <div class="rrow"><span class="rrow-label">趨勢評估</span><span style="font-size:12px;color:var(--text)">${diff<0?'下降趨勢合理 ✓':diff>0?'體重上升，注意飲食':'本週維持穩定'}</span></div>`;
+  } else {
+    weightBlock = '<div style="color:var(--muted);font-size:12px;padding:8px 0;line-height:1.6">本週無體重記錄。<br>在今日記錄欄輸入體重並儲存，下週即可看到趨勢分析。</div>';
+  }
+
+  const tipClass = {ok:'rtip-ok', warn:'rtip-warn', bad:'rtip-bad'};
+  const tipIcon  = {ok:'✓', warn:'↑', bad:'!'};
+
+  card.innerHTML = `
+    <div class="report-head">
+      <div>
+        <div class="report-week-title">${r.weekRange}</div>
+        <div class="report-meta">記錄 ${r.n} 天 · 上次更新：${new Date().toLocaleDateString('zh-TW',{month:'long',day:'numeric'})}</div>
+      </div>
+      <button class="report-email-btn" onclick="emailReport()">📧 寄給自己</button>
+    </div>
+
+    <div class="report-score-row">
+      <div class="score-ring-wrap">
+        <svg class="score-ring" viewBox="0 0 80 80">
+          <circle class="score-ring-bg" cx="40" cy="40" r="35"/>
+          <circle class="score-ring-fill" cx="40" cy="40" r="35" stroke="${scoreColor}" stroke-dashoffset="${scoreOffset}"/>
+        </svg>
+        <div class="score-ring-text">
+          <div class="score-num" style="color:${scoreColor}">${r.score}</div>
+          <div class="score-pts">/ 100</div>
+        </div>
+      </div>
+      <div class="score-right">
+        <div class="score-grade">${grade}</div>
+        <div class="score-desc">${gradeDesc}</div>
+      </div>
+    </div>
+
+    <div class="report-kpis">
+      <div class="rkpi"><div class="rkpi-val hpink">${r.avgIntake}</div><div class="rkpi-label">平均攝取 kcal</div></div>
+      <div class="rkpi"><div class="rkpi-val" style="color:var(--purple)">${r.avgDeficit}</div><div class="rkpi-label">平均赤字 kcal</div></div>
+      <div class="rkpi"><div class="rkpi-val" style="color:var(--mint)">${r.avgProtein}<span style="font-size:16px">g</span></div><div class="rkpi-label">平均蛋白質</div></div>
+      <div class="rkpi"><div class="rkpi-val" style="color:var(--warm)">${r.exDays}<span style="font-size:16px">天</span></div><div class="rkpi-label">運動天數</div></div>
+    </div>
+
+    <div class="report-cols">
+      <div class="report-section">
+        <div class="report-section-title">🍽 飲食分析</div>
+        <div class="rrow"><span class="rrow-label">平均攝取</span>
+          <span class="rrow-badge ${r.avgIntake<=GOAL?'rb-ok':'rb-bad'}">${r.avgIntake} kcal</span></div>
+        <div class="rrow"><span class="rrow-label">達標天數</span>
+          <span class="rrow-val">${r.underGoalDays} / ${r.n} 天</span></div>
+        <div class="rrow"><span class="rrow-label">平均碳水</span>
+          <span class="rrow-badge ${r.avgCarb<=150?'rb-ok':'rb-warn'}">${r.avgCarb}g</span></div>
+        <div class="rrow"><span class="rrow-label">平均蛋白質</span>
+          <span class="rrow-badge ${r.avgProtein>=100?'rb-ok':'rb-warn'}">${r.avgProtein}g</span></div>
+        <div class="rrow"><span class="rrow-label">平均脂肪</span>
+          <span class="rrow-badge ${r.avgFat<=60?'rb-ok':'rb-warn'}">${r.avgFat}g</span></div>
+        <div class="rrow"><span class="rrow-label">蛋白質達標</span>
+          <span class="rrow-val">${r.proteinGoalDays} / ${r.n} 天</span></div>
+        ${r.trainDays>0?`<div class="rrow"><span class="rrow-label">重訓日</span><span class="rrow-badge rb-ok">🏋️ ${r.trainDays} 天</span></div>`:''}
+      </div>
+
+      <div class="report-section">
+        <div class="report-section-title">⚖️ 體重趨勢</div>
+        ${weightBlock}
+      </div>
+    </div>
+
+    <div class="report-tips-box">
+      <div class="report-tips-title">💡 本週個人化建議</div>
+      ${r.tips.map(t=>`
+        <div class="rtip">
+          <div class="rtip-dot ${tipClass[t.type]}">${tipIcon[t.type]}</div>
+          <span>${t.text}</span>
+        </div>`).join('')}
+    </div>`;
+}
+
+function emailReport() {
+  const r = generateWeeklyReport();
+  if (!r) { toast('尚無報告數據'); return; }
+  const subject = `Joanne 週報 ${r.weekRange}`;
+  const lines = [
+    `══ Joanne 每週健康報告 ${r.weekRange} ══`,
+    ``,
+    `📊 本週成績：${r.score}/100（${r.score>=85?'優秀':r.score>=70?'良好':r.score>=55?'加油':'需改善'}）`,
+    `記錄天數：${r.n} 天`,
+    ``,
+    `─ 飲食 ─`,
+    `平均每日攝取：${r.avgIntake} kcal（目標 ${GOAL} kcal）`,
+    `平均熱量赤字：${r.avgDeficit} kcal`,
+    `達標天數：${r.underGoalDays}/${r.n} 天`,
+    ``,
+    `─ 三大營養素（每日平均）─`,
+    `蛋白質：${r.avgProtein}g（目標 100g）`,
+    `碳水：${r.avgCarb}g（目標 130g）`,
+    `脂肪：${r.avgFat}g（目標 43g）`,
+    r.trainDays>0 ? `重訓日：${r.trainDays} 天（蛋白質目標提升至 130g）` : '',
+    ``,
+    `─ 本週建議 ─`,
+    ...r.tips.map(t=>`${t.type==='ok'?'✓':t.type==='warn'?'▲':'✕'} ${t.text}`),
+    ``,
+    r.weightTrend ? `─ 體重 ─\n本週：${r.weightTrend.start}kg → ${r.weightTrend.end}kg（${r.weightTrend.diff}kg）` : '',
+    ``,
+    `Keep going Joanne! 💪`,
+  ].filter(l=>l!==undefined).join('\n');
+  window.location.href = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(lines)}`;
+}
+
 // ── BUILD MERGED CHART DATA (histDays + localStorage) ───────────────────────
 function buildChartData() {
   const map = {};
@@ -986,6 +1299,7 @@ function renderCharts() {
 }
 renderCharts();
 updateWeightSummary();
+renderWeeklyReport();
 
 function switchTab(tab,el){
   document.querySelectorAll('.chart-tab').forEach(t=>t.classList.remove('active'));el.classList.add('active');
