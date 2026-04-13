@@ -1254,6 +1254,15 @@ function renderWeightChart() {
 }
 
 // ── CHARTS ──────────────────────────────────────────────────────────────────
+// Returns the Monday (YYYY-MM-DD) of the calendar week containing dateKey
+function getMondayOf(dateKey) {
+  const d = new Date(dateKey + 'T00:00:00');
+  const dow = d.getDay();
+  const diff = dow === 0 ? -6 : 1 - dow;
+  d.setDate(d.getDate() + diff);
+  return d.toISOString().slice(0, 10);
+}
+
 function renderCharts() {
   const days = buildChartData();
   if (days.length === 0) return;
@@ -1262,42 +1271,81 @@ function renderCharts() {
   const badge = document.querySelector('.section-badge');
   if (badge) badge.textContent = `${days[0].date} — ${days[days.length-1].date}`;
 
-  // BAR CHART
+  // ── BAR CHART: one bar per week (Mon-Sun average) ─────────────
   const ca = document.getElementById('chartArea');
   ca.innerHTML = '';
-  const maxI = Math.max(...days.map(d => d.intake));
-  const maxD = Math.max(...days.map(d => d.deficit));
+
+  const weekMap = {};
   days.forEach(d => {
-    const iH = Math.round((d.intake / maxI) * 150);
-    const dH = Math.round((d.deficit / maxD) * 150);
-    const col = document.createElement('div'); col.className = 'chart-col';
-    col.innerHTML = `<div class="chart-bar-pair"><div class="chart-bar intake" style="height:${iH}px" title="${d.intake} kcal 攝取"></div><div class="chart-bar deficit" style="height:${dH}px" title="${d.deficit} kcal 赤字"></div></div><div class="chart-date">${d.date.split('/')[1]||d.date}</div>`;
+    const mon = getMondayOf(d.dateKey);
+    if (!weekMap[mon]) weekMap[mon] = { mon, days: [] };
+    weekMap[mon].days.push(d);
+  });
+  const weeks = Object.values(weekMap)
+    .sort((a, b) => a.mon.localeCompare(b.mon))
+    .map(w => {
+      const n = w.days.length;
+      const dt = new Date(w.mon + 'T00:00:00');
+      return {
+        label:   `${dt.getMonth()+1}/${dt.getDate()}`,
+        intake:  Math.round(w.days.reduce((s,d) => s + d.intake,  0) / n),
+        deficit: Math.round(w.days.reduce((s,d) => s + d.deficit, 0) / n),
+        count:   n
+      };
+    });
+
+  const maxI = Math.max(...weeks.map(w => w.intake),  1);
+  const maxD = Math.max(...weeks.map(w => w.deficit), 1);
+  weeks.forEach(w => {
+    const iH = Math.round((w.intake  / maxI) * 150);
+    const dH = Math.max(0, Math.round((w.deficit / maxD) * 150));
+    const col = document.createElement('div');
+    col.className = 'chart-col';
+    col.innerHTML = `<div class="chart-bar-pair">
+      <div class="chart-bar intake"  style="height:${iH}px" title="週均攝取 ${w.intake.toLocaleString()} kcal（${w.count}天）"></div>
+      <div class="chart-bar deficit" style="height:${dH}px" title="週均赤字 ${w.deficit.toLocaleString()} kcal"></div>
+    </div><div class="chart-date">${w.label}</div>`;
     ca.appendChild(col);
   });
 
-  // LINE CHART
+  // ── LINE CHART: cumulative deficit per day, dates inside SVG ───
   const svg = document.getElementById('lineSvg');
   const labEl = document.getElementById('lineLabels');
   let cum = 0;
   const pts = days.map(d => { cum += d.deficit; return cum; });
-  const maxC = Math.max(...pts);
-  const W = 800, H = 200, PX = 28, PY = 16;
-  const xs = pts.map((_, i) => PX + i * ((W - PX*2) / Math.max(pts.length - 1, 1)));
-  const ys = pts.map(p => H - PY - (p / maxC) * (H - PY*2));
-  let g = '';
-  [0.25, 0.5, 0.75, 1].forEach(r => {
-    const y = H - PY - r * (H - PY*2), val = Math.round(maxC * r);
-    g += `<line x1="${PX}" y1="${y}" x2="${W-PX}" y2="${y}" stroke="rgba(0,0,0,0.07)" stroke-width="1"/>
-    <text x="${PX-6}" y="${y+4}" text-anchor="end" font-size="11" fill="#9A7A74" font-family="DM Mono,monospace">${(val/1000).toFixed(1)}k</text>`;
-  });
-  const area = `M${xs[0]},${ys[0]} ${xs.map((x,i)=>`L${x},${ys[i]}`).join(' ')} L${xs[xs.length-1]},${H-PY} L${xs[0]},${H-PY} Z`;
-  const line = `M${xs[0]},${ys[0]} ${xs.map((x,i)=>`L${x},${ys[i]}`).join(' ')}`;
-  const dots = xs.map((x, i) => `<circle cx="${x}" cy="${ys[i]}" r="5" fill="#D4856A" stroke="white" stroke-width="2.5"><title>${days[i].date} 累積: ${pts[i].toLocaleString()} 大卡</title></circle>`).join('');
-  svg.innerHTML = `${g}<path d="${area}" fill="rgba(212,133,106,0.10)"/><path d="${line}" fill="none" stroke="#D4856A" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>${dots}`;
-  labEl.innerHTML = '';
-  days.forEach(d => { const e = document.createElement('div'); e.className = 'line-label'; e.textContent = d.date.split('/')[1]||d.date; labEl.appendChild(e); });
+  const maxC = Math.max(...pts, 1);
+  const W = 800, H = 200, PX = 32, PY_TOP = 12, PY_BOT = 28;
+  const chartBottom = H - PY_BOT;
+  const xs = pts.map((_, i) => PX + i * ((W - PX * 2) / Math.max(pts.length - 1, 1)));
+  const ys = pts.map(p => chartBottom - (p / maxC) * (chartBottom - PY_TOP));
 
-  // STATS
+  let g = '';
+  // Grid reference lines + y-axis labels
+  [0.25, 0.5, 0.75, 1].forEach(r => {
+    const y   = chartBottom - r * (chartBottom - PY_TOP);
+    const val = Math.round(maxC * r);
+    g += `<line x1="${PX}" y1="${y.toFixed(1)}" x2="${W-PX}" y2="${y.toFixed(1)}" stroke="rgba(0,0,0,0.07)" stroke-width="1"/>`;
+    g += `<text x="${PX-6}" y="${(y+4).toFixed(1)}" text-anchor="end" font-size="11" fill="#9A7A74" font-family="DM Mono,monospace">${(val/1000).toFixed(1)}k</text>`;
+  });
+
+  // Date labels inside SVG, spaced ~every 7 days
+  const step = Math.max(1, Math.ceil(days.length / 8));
+  days.forEach((d, i) => {
+    if (i % step === 0 || i === days.length - 1) {
+      const anchor = i === 0 ? 'start' : i === days.length - 1 ? 'end' : 'middle';
+      g += `<text x="${xs[i].toFixed(1)}" y="${H - 6}" text-anchor="${anchor}" font-size="10" fill="#9A7A74" font-family="DM Mono,monospace">${d.date}</text>`;
+    }
+  });
+
+  const area = `M${xs[0]},${ys[0]} ${xs.map((x,i)=>`L${x},${ys[i]}`).join(' ')} L${xs[xs.length-1]},${chartBottom} L${xs[0]},${chartBottom} Z`;
+  const line = `M${xs[0]},${ys[0]} ${xs.map((x,i)=>`L${x},${ys[i]}`).join(' ')}`;
+  const dots = xs.map((x, i) =>
+    `<circle cx="${x.toFixed(1)}" cy="${ys[i].toFixed(1)}" r="4" fill="#D4856A" stroke="white" stroke-width="2"><title>${days[i].date} 累積: ${pts[i].toLocaleString()} 大卡</title></circle>`
+  ).join('');
+  svg.innerHTML = `${g}<path d="${area}" fill="rgba(212,133,106,0.10)"/><path d="${line}" fill="none" stroke="#D4856A" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>${dots}`;
+  labEl.innerHTML = ''; // labels now rendered inside SVG
+
+  // ── STATS ──────────────────────────────────────────────────────
   const total = pts[pts.length - 1];
   document.getElementById('cTotal').textContent = total.toLocaleString();
   document.getElementById('cKg').textContent = (total / 7700).toFixed(2);
