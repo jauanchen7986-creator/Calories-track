@@ -328,6 +328,10 @@ svg.score-ring{width:80px;height:80px;transform:rotate(-90deg);}
 .rtip-dot{flex-shrink:0;width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;margin-top:1px;}
 .rtip-ok{background:#D4EBEA;}.rtip-warn{background:var(--yellow-light);}.rtip-bad{background:var(--pink-light);}
 .report-no-data{text-align:center;padding:48px 24px;color:var(--muted);}
+.report-nav{display:flex;gap:6px;}
+.report-nav-btn{background:var(--surface);border:1.5px solid var(--border);border-radius:100px;padding:7px 14px;font-size:12px;font-weight:700;cursor:pointer;color:var(--muted);transition:all 0.2s;font-family:'Noto Sans KR',sans-serif;white-space:nowrap;}
+.report-nav-btn:hover:not(:disabled){border-color:var(--pink);color:var(--pink);}
+.report-nav-btn:disabled{opacity:0.35;cursor:default;}
 @media(max-width:768px){
   .report-kpis,.report-cols{grid-template-columns:1fr 1fr;}
   .report-card{padding:20px 16px;}
@@ -908,189 +912,197 @@ function buildFullDayData() {
   return Object.entries(map).sort((a,b)=>a[0].localeCompare(b[0])).map(([,d])=>d);
 }
 
-function getWeekOf(dateKey) {
-  const dt = new Date(dateKey+'T00:00:00');
-  const day = dt.getDay(); // 0=Sun
-  const diff = day===0 ? -6 : 1-day; // shift to Monday
-  const mon = new Date(dt); mon.setDate(dt.getDate()+diff);
-  return mon.toISOString().slice(0,10);
+// Returns the Monday dateKey of the report week.
+// Today is Monday: show last completed week (Mon Apr 6 – Sun Apr 12).
+// Today is Sunday: show current week ending today (Mon Apr 13 – Sun Apr 19).
+// offset: 0 = default week, -1 = one week earlier, etc.
+let _reportOffset = 0;
+
+function getReportMondayKey(offset) {
+  const today = new Date();
+  const dow = today.getDay(); // 0=Sun 1=Mon … 6=Sat
+  // "Base Sunday" = last completed Sunday (today itself when Sunday)
+  const baseSun = new Date(today);
+  if (dow !== 0) baseSun.setDate(today.getDate() - dow);
+  // Monday of that week
+  const baseMon = new Date(baseSun);
+  baseMon.setDate(baseSun.getDate() - 6);
+  // Apply offset
+  baseMon.setDate(baseMon.getDate() + (offset||0) * 7);
+  return baseMon.toISOString().slice(0,10);
 }
 
 function calcWeekScore(days, proteinGoalDays) {
   const n = days.length;
   const underDays  = days.filter(d=>d.intake<=GOAL).length;
   const exDays     = days.filter(d=>d.exercise>0).length;
-  const consistency = Math.round((n/7)*30);
-  const calControl  = Math.round((underDays/n)*25);
-  const proteinPts  = Math.round((proteinGoalDays/n)*25);
-  const exercisePts = Math.round((exDays/n)*20);
-  return Math.min(consistency+calControl+proteinPts+exercisePts, 100);
+  return Math.min(
+    Math.round((n/7)*30) +
+    Math.round((underDays/n)*25) +
+    Math.round((proteinGoalDays/n)*25) +
+    Math.round((exDays/n)*20), 100);
 }
 
-function generateWeeklyReport() {
+function generateWeeklyReport(mondayKey) {
+  const sunKey = (() => {
+    const d = new Date(mondayKey+'T00:00:00'); d.setDate(d.getDate()+6);
+    return d.toISOString().slice(0,10);
+  })();
+  const mon = new Date(mondayKey+'T00:00:00');
+  const sun = new Date(sunKey+'T00:00:00');
+  const fmt = d=>`${d.getMonth()+1}/${d.getDate()}`;
+  const weekRange = `${fmt(mon)} — ${fmt(sun)}`;
+
+  // Is this week "in the future" relative to today?
+  const todayKey = new Date().toISOString().slice(0,10);
+  if (mondayKey > todayKey) return { future:true, weekRange };
+
   const allDays = buildFullDayData();
-  if (!allDays.length) return null;
+  const days = allDays.filter(d=>d.dateKey>=mondayKey && d.dateKey<=sunKey);
 
-  // Group by week (Mon key)
-  const weeks = {};
-  allDays.forEach(d => {
-    const monKey = getWeekOf(d.dateKey);
-    if (!weeks[monKey]) weeks[monKey] = [];
-    weeks[monKey].push(d);
-  });
+  if (!days.length) return { empty:true, weekRange, mondayKey };
 
-  // Most recent week with data
-  const sortedKeys = Object.keys(weeks).sort();
-  const latestKey  = sortedKeys[sortedKeys.length-1];
-  const days       = weeks[latestKey];
-
-  const n           = days.length;
+  const n = days.length;
   const avgIntake   = Math.round(days.reduce((s,d)=>s+d.intake,0)/n);
   const avgDeficit  = Math.round(days.reduce((s,d)=>s+d.deficit,0)/n);
-  const avgExercise = Math.round(days.reduce((s,d)=>s+d.exercise,0)/n);
   const avgProtein  = Math.round(days.reduce((s,d)=>s+d.protein,0)/n);
   const avgCarb     = Math.round(days.reduce((s,d)=>s+d.carb,0)/n);
   const avgFat      = Math.round(days.reduce((s,d)=>s+d.fat,0)/n);
   const trainDays   = days.filter(d=>detectTraining(d.exs)).length;
-  const proteinGoalDays = days.filter(d=>{
-    const g = detectTraining(d.exs) ? MACRO_TRAIN.protein : MACRO_STD.protein;
-    return d.protein >= g;
-  }).length;
+  const proteinGoalDays = days.filter(d=>d.protein>=(detectTraining(d.exs)?MACRO_TRAIN.protein:MACRO_STD.protein)).length;
   const underGoalDays = days.filter(d=>d.intake<=GOAL).length;
-  const exDays        = days.filter(d=>d.exercise>0).length;
-  const score         = calcWeekScore(days, proteinGoalDays);
+  const exDays = days.filter(d=>d.exercise>0).length;
+  const score  = calcWeekScore(days, proteinGoalDays);
 
-  // Week date range string
-  const mon = new Date(latestKey+'T00:00:00');
-  const sun = new Date(mon); sun.setDate(mon.getDate()+6);
-  const fmt = d=>`${d.getMonth()+1}/${d.getDate()}`;
-  const weekRange = `${fmt(mon)} — ${fmt(sun)}`;
-
-  // Weight data for this week
-  const weights = getWeightHistory().filter(w=>w.dateKey>=days[0].dateKey && w.dateKey<=days[days.length-1].dateKey);
+  // Weight
+  const allW = getWeightHistory().filter(w=>w.dateKey>=mondayKey && w.dateKey<=sunKey);
   let weightTrend = null;
-  if (weights.length>=2) {
-    const diff = (weights[weights.length-1].weight - weights[0].weight).toFixed(1);
-    weightTrend = { start:weights[0].weight, end:weights[weights.length-1].weight, diff };
+  if (allW.length>=2) {
+    const diff = (allW[allW.length-1].weight - allW[0].weight).toFixed(1);
+    weightTrend = { start:allW[0].weight, end:allW[allW.length-1].weight, diff };
   }
 
   // Tips
   const tips = [];
-  if (n < 5) tips.push({type:'warn', icon:'📅', text:`本週只記錄了 ${n} 天，建議每天記錄更準確`});
-  else        tips.push({type:'ok',   icon:'✓',  text:`本週連續記錄 ${n} 天，習慣養成中！`});
+  if (n<5)            tips.push({type:'warn',text:`本週只記錄了 ${n} 天，建議每天記錄更準確`});
+  else                tips.push({type:'ok',  text:`本週連續記錄 ${n} 天，習慣養成中！`});
+  if (avgProtein>=100)tips.push({type:'ok',  text:`平均蛋白質 ${avgProtein}g 達標，肌肉保護良好`});
+  else                tips.push({type:'warn',text:`平均蛋白質 ${avgProtein}g 偏低（目標100g），多補充雞胸肉、豆乾`});
+  if (avgIntake<=GOAL)tips.push({type:'ok',  text:`平均攝取 ${avgIntake} kcal，在 ${GOAL} kcal 目標內`});
+  else                tips.push({type:'bad', text:`平均攝取 ${avgIntake} kcal，超出目標 ${avgIntake-GOAL} kcal`});
+  if (avgDeficit>=250)tips.push({type:'ok',  text:`平均赤字 ${avgDeficit} kcal，本週減重進度良好`});
+  else if(avgDeficit>=150)tips.push({type:'warn',text:`平均赤字 ${avgDeficit} kcal，可增加一點運動量`});
+  else                tips.push({type:'bad', text:`平均赤字 ${avgDeficit} kcal 過低，建議增加運動`});
+  if (trainDays>0)    tips.push({type:'ok',  text:`本週重訓 ${trainDays} 次，蛋白質目標已自動提升，繼續保持`});
+  if (avgCarb>150)    tips.push({type:'warn',text:`碳水平均 ${avgCarb}g 偏高，注意精緻澱粉`});
+  if (exDays===0)     tips.push({type:'bad', text:'本週無運動記錄，建議每週至少3次有氧或重訓'});
 
-  if (avgProtein >= 100) tips.push({type:'ok',   icon:'✓',  text:`平均蛋白質 ${avgProtein}g，達標！肌肉保護良好`});
-  else                   tips.push({type:'warn',  icon:'↑',  text:`平均蛋白質 ${avgProtein}g 偏低（目標100g），多補充雞胸肉、豆乾、高蛋白飲品`});
+  return { weekRange, mondayKey, n, avgIntake, avgDeficit, avgProtein, avgCarb, avgFat,
+           trainDays, proteinGoalDays, underGoalDays, exDays, score, tips, weightTrend };
+}
 
-  if (avgIntake <= GOAL)  tips.push({type:'ok',   icon:'✓',  text:`平均攝取 ${avgIntake} kcal，在目標 ${GOAL} kcal 範圍內`});
-  else                    tips.push({type:'bad',   icon:'!',  text:`平均攝取 ${avgIntake} kcal，超出目標 ${avgIntake-GOAL} kcal，注意份量`});
-
-  if (avgDeficit >= 250)  tips.push({type:'ok',   icon:'✓',  text:`平均赤字 ${avgDeficit} kcal，本週減重進度良好`});
-  else if (avgDeficit>=150) tips.push({type:'warn',icon:'↑', text:`平均赤字 ${avgDeficit} kcal，可以增加一點運動量`});
-  else                    tips.push({type:'bad',   icon:'!',  text:`平均赤字 ${avgDeficit} kcal 過低，建議增加運動或減少攝取`});
-
-  if (trainDays > 0)      tips.push({type:'ok',   icon:'💪', text:`本週重訓 ${trainDays} 次！蛋白質目標已自動調高，繼續保持`});
-  if (avgCarb > 150)      tips.push({type:'warn',  icon:'↓',  text:`碳水平均 ${avgCarb}g 偏高，注意精緻澱粉與含糖飲料`});
-  if (exDays === 0)       tips.push({type:'bad',   icon:'!',  text:'本週沒有運動記錄，建議每週至少3次有氧或重訓'});
-
-  return { weekRange, n, avgIntake, avgDeficit, avgExercise, avgProtein, avgCarb, avgFat,
-           trainDays, proteinGoalDays, underGoalDays, exDays, score, tips, weightTrend, days };
+function changeReportWeek(delta) {
+  _reportOffset += delta;
+  renderWeeklyReport();
 }
 
 function renderWeeklyReport() {
-  const card = document.getElementById('reportCard');
+  const card  = document.getElementById('reportCard');
   const badge = document.getElementById('reportBadge');
   if (!card) return;
 
-  const r = generateWeeklyReport();
-  if (!r) {
-    card.innerHTML = '<div class="report-no-data" style="font-size:14px;color:var(--muted)">尚無足夠數據生成報告，請先記錄至少一週的飲食。</div>';
+  const mondayKey   = getReportMondayKey(_reportOffset);
+  const nextMonKey  = getReportMondayKey(_reportOffset + 1);
+  const todayKey    = new Date().toISOString().slice(0,10);
+  const canNext     = nextMonKey <= todayKey;
+
+  const r = generateWeeklyReport(mondayKey);
+  if (badge) badge.textContent = _reportOffset===0 ? '最新一週 ✓' : `第 ${-_reportOffset+1} 份報告`;
+
+  // Nav HTML (reused in both full and empty renders)
+  const navHTML = `<div class="report-nav">
+    <button class="report-nav-btn" onclick="changeReportWeek(-1)">← 上週</button>
+    <button class="report-nav-btn" onclick="changeReportWeek(1)" ${canNext?'':'disabled'}>下週 →</button>
+  </div>`;
+
+  if (r.future) {
+    card.innerHTML = `<div class="report-head"><div><div class="report-week-title">${r.weekRange}</div><div class="report-meta">本週進行中，週日結束後生成報告</div></div>${navHTML}</div><div class="report-no-data">本週尚未結束，繼續努力記錄中… 💪</div>`;
+    return;
+  }
+  if (r.empty) {
+    card.innerHTML = `<div class="report-head"><div><div class="report-week-title">${r.weekRange}</div><div class="report-meta">本週尚無記錄</div></div>${navHTML}</div><div class="report-no-data">這週沒有飲食記錄。<br><small style="color:var(--muted)">切換到「今日記錄」輸入數據後儲存，報告將自動更新。</small></div>`;
     return;
   }
 
-  // Sunday check
-  const today = new Date();
-  const isSunday = today.getDay() === 0;
-  if (badge) badge.textContent = isSunday ? `${today.getMonth()+1}/${today.getDate()} 今日生成 ✓` : '每週日自動生成';
-
-  // Score ring
-  const scoreOffset = 220 - (r.score/100)*220;
+  const scoreOff   = 220-(r.score/100)*220;
   const scoreColor = r.score>=85?'var(--mint)':r.score>=65?'var(--yellow)':'var(--pink)';
-  const grade = r.score>=85?'🌟 優秀':r.score>=70?'👍 良好':r.score>=55?'💪 加油':'📈 需改善';
-  const gradeDesc = r.score>=85?'本週飲食均衡、運動穩定，繼續保持！'
-                  : r.score>=70?'整體表現良好，小細節再加強就更完美了'
-                  : r.score>=55?'有在努力！調整蛋白質攝取和運動頻率'
-                  : '本週記錄不足或攝取失衡，加油！';
+  const grade      = r.score>=85?'🌟 優秀':r.score>=70?'👍 良好':r.score>=55?'💪 加油':'📈 需改善';
+  const gradeDesc  = r.score>=85?'飲食均衡、運動穩定，繼續保持！'
+                   : r.score>=70?'整體良好，小細節再加強就更完美'
+                   : r.score>=55?'有在努力！調整蛋白質攝取和運動頻率'
+                   : '記錄不足或攝取失衡，下週加油！';
 
-  // Weight trend block
   let weightBlock = '';
   if (r.weightTrend) {
-    const diff = parseFloat(r.weightTrend.diff);
-    const wClass = diff<0?'rb-ok':diff>0?'rb-bad':'rb-warn';
-    const wText  = diff<0?`↓ ${Math.abs(diff)}kg`:`${diff>0?'↑':'-'} ${Math.abs(diff)}kg`;
+    const d = parseFloat(r.weightTrend.diff);
+    const wc = d<0?'rb-ok':d>0?'rb-bad':'rb-warn';
+    const wt = d<0?`↓ ${Math.abs(d)} kg`:d>0?`↑ ${Math.abs(d)} kg`:'— 維持';
     weightBlock = `
-      <div class="rrow"><span class="rrow-label">週初體重</span><span class="rrow-val">${r.weightTrend.start} kg</span></div>
-      <div class="rrow"><span class="rrow-label">週末體重</span><span class="rrow-val">${r.weightTrend.end} kg</span></div>
-      <div class="rrow"><span class="rrow-label">本週變化</span><span class="rrow-badge ${wClass}">${wText}</span></div>
-      <div class="rrow"><span class="rrow-label">趨勢評估</span><span style="font-size:12px;color:var(--text)">${diff<0?'下降趨勢合理 ✓':diff>0?'體重上升，注意飲食':'本週維持穩定'}</span></div>`;
+      <div class="rrow"><span class="rrow-label">週初</span><span class="rrow-val">${r.weightTrend.start} kg</span></div>
+      <div class="rrow"><span class="rrow-label">週末</span><span class="rrow-val">${r.weightTrend.end} kg</span></div>
+      <div class="rrow"><span class="rrow-label">變化</span><span class="rrow-badge ${wc}">${wt}</span></div>
+      <div class="rrow"><span class="rrow-label">評估</span><span style="font-size:12px">${d<0?'下降趨勢合理 ✓':d>0?'體重上升，注意飲食':'本週維持穩定'}</span></div>`;
   } else {
-    weightBlock = '<div style="color:var(--muted);font-size:12px;padding:8px 0;line-height:1.6">本週無體重記錄。<br>在今日記錄欄輸入體重並儲存，下週即可看到趨勢分析。</div>';
+    weightBlock = `<div style="color:var(--muted);font-size:12px;line-height:1.8;padding:6px 0">本週無體重記錄<br>在今日記錄輸入體重並儲存，下週可看趨勢分析</div>`;
   }
 
-  const tipClass = {ok:'rtip-ok', warn:'rtip-warn', bad:'rtip-bad'};
-  const tipIcon  = {ok:'✓', warn:'↑', bad:'!'};
+  const tc = {ok:'rtip-ok',warn:'rtip-warn',bad:'rtip-bad'};
+  const ti = {ok:'✓',warn:'↑',bad:'!'};
 
   card.innerHTML = `
     <div class="report-head">
       <div>
         <div class="report-week-title">${r.weekRange}</div>
-        <div class="report-meta">記錄 ${r.n} 天 · 上次更新：${new Date().toLocaleDateString('zh-TW',{month:'long',day:'numeric'})}</div>
+        <div class="report-meta">記錄 ${r.n} / 7 天 · ${new Date().toLocaleDateString('zh-TW',{month:'long',day:'numeric'})}更新</div>
       </div>
-      <button class="report-email-btn" onclick="emailReport()">📧 寄給自己</button>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        ${navHTML}
+        <button class="report-email-btn" onclick="emailReport()">📧 寄給自己</button>
+      </div>
     </div>
 
     <div class="report-score-row">
       <div class="score-ring-wrap">
         <svg class="score-ring" viewBox="0 0 80 80">
           <circle class="score-ring-bg" cx="40" cy="40" r="35"/>
-          <circle class="score-ring-fill" cx="40" cy="40" r="35" stroke="${scoreColor}" stroke-dashoffset="${scoreOffset}"/>
+          <circle class="score-ring-fill" cx="40" cy="40" r="35" stroke="${scoreColor}" stroke-dashoffset="${scoreOff}"/>
         </svg>
         <div class="score-ring-text">
           <div class="score-num" style="color:${scoreColor}">${r.score}</div>
-          <div class="score-pts">/ 100</div>
+          <div class="score-pts">分</div>
         </div>
       </div>
-      <div class="score-right">
-        <div class="score-grade">${grade}</div>
-        <div class="score-desc">${gradeDesc}</div>
-      </div>
+      <div class="score-right"><div class="score-grade">${grade}</div><div class="score-desc">${gradeDesc}</div></div>
     </div>
 
     <div class="report-kpis">
       <div class="rkpi"><div class="rkpi-val hpink">${r.avgIntake}</div><div class="rkpi-label">平均攝取 kcal</div></div>
       <div class="rkpi"><div class="rkpi-val" style="color:var(--purple)">${r.avgDeficit}</div><div class="rkpi-label">平均赤字 kcal</div></div>
-      <div class="rkpi"><div class="rkpi-val" style="color:var(--mint)">${r.avgProtein}<span style="font-size:16px">g</span></div><div class="rkpi-label">平均蛋白質</div></div>
-      <div class="rkpi"><div class="rkpi-val" style="color:var(--warm)">${r.exDays}<span style="font-size:16px">天</span></div><div class="rkpi-label">運動天數</div></div>
+      <div class="rkpi"><div class="rkpi-val" style="color:var(--mint)">${r.avgProtein}g</div><div class="rkpi-label">平均蛋白質</div></div>
+      <div class="rkpi"><div class="rkpi-val" style="color:var(--warm)">${r.exDays}天</div><div class="rkpi-label">有運動天數</div></div>
     </div>
 
     <div class="report-cols">
       <div class="report-section">
         <div class="report-section-title">🍽 飲食分析</div>
-        <div class="rrow"><span class="rrow-label">平均攝取</span>
-          <span class="rrow-badge ${r.avgIntake<=GOAL?'rb-ok':'rb-bad'}">${r.avgIntake} kcal</span></div>
-        <div class="rrow"><span class="rrow-label">達標天數</span>
-          <span class="rrow-val">${r.underGoalDays} / ${r.n} 天</span></div>
-        <div class="rrow"><span class="rrow-label">平均碳水</span>
-          <span class="rrow-badge ${r.avgCarb<=150?'rb-ok':'rb-warn'}">${r.avgCarb}g</span></div>
-        <div class="rrow"><span class="rrow-label">平均蛋白質</span>
-          <span class="rrow-badge ${r.avgProtein>=100?'rb-ok':'rb-warn'}">${r.avgProtein}g</span></div>
-        <div class="rrow"><span class="rrow-label">平均脂肪</span>
-          <span class="rrow-badge ${r.avgFat<=60?'rb-ok':'rb-warn'}">${r.avgFat}g</span></div>
-        <div class="rrow"><span class="rrow-label">蛋白質達標</span>
-          <span class="rrow-val">${r.proteinGoalDays} / ${r.n} 天</span></div>
+        <div class="rrow"><span class="rrow-label">平均攝取</span><span class="rrow-badge ${r.avgIntake<=GOAL?'rb-ok':'rb-bad'}">${r.avgIntake} kcal</span></div>
+        <div class="rrow"><span class="rrow-label">達標天數</span><span class="rrow-val">${r.underGoalDays} / ${r.n} 天</span></div>
+        <div class="rrow"><span class="rrow-label">蛋白質均</span><span class="rrow-badge ${r.avgProtein>=100?'rb-ok':'rb-warn'}">${r.avgProtein}g</span></div>
+        <div class="rrow"><span class="rrow-label">蛋白達標</span><span class="rrow-val">${r.proteinGoalDays} / ${r.n} 天</span></div>
+        <div class="rrow"><span class="rrow-label">碳水均</span><span class="rrow-badge ${r.avgCarb<=150?'rb-ok':'rb-warn'}">${r.avgCarb}g</span></div>
+        <div class="rrow"><span class="rrow-label">脂肪均</span><span class="rrow-badge ${r.avgFat<=60?'rb-ok':'rb-warn'}">${r.avgFat}g</span></div>
         ${r.trainDays>0?`<div class="rrow"><span class="rrow-label">重訓日</span><span class="rrow-badge rb-ok">🏋️ ${r.trainDays} 天</span></div>`:''}
       </div>
-
       <div class="report-section">
         <div class="report-section-title">⚖️ 體重趨勢</div>
         ${weightBlock}
@@ -1098,44 +1110,37 @@ function renderWeeklyReport() {
     </div>
 
     <div class="report-tips-box">
-      <div class="report-tips-title">💡 本週個人化建議</div>
-      ${r.tips.map(t=>`
-        <div class="rtip">
-          <div class="rtip-dot ${tipClass[t.type]}">${tipIcon[t.type]}</div>
-          <span>${t.text}</span>
-        </div>`).join('')}
+      <div class="report-tips-title">💡 個人化建議</div>
+      ${r.tips.map(t=>`<div class="rtip"><div class="rtip-dot ${tc[t.type]}">${ti[t.type]}</div><span>${t.text}</span></div>`).join('')}
     </div>`;
 }
 
 function emailReport() {
-  const r = generateWeeklyReport();
-  if (!r) { toast('尚無報告數據'); return; }
+  const r = generateWeeklyReport(getReportMondayKey(_reportOffset));
+  if (!r || r.empty || r.future) { toast('本週尚無數據'); return; }
   const subject = `Joanne 週報 ${r.weekRange}`;
-  const lines = [
-    `══ Joanne 每週健康報告 ${r.weekRange} ══`,
-    ``,
-    `📊 本週成績：${r.score}/100（${r.score>=85?'優秀':r.score>=70?'良好':r.score>=55?'加油':'需改善'}）`,
-    `記錄天數：${r.n} 天`,
-    ``,
+  const body = [
+    `══ Joanne 每週健康報告 ${r.weekRange} ══`,``,
+    `📊 成績：${r.score}/100（${r.score>=85?'優秀':r.score>=70?'良好':r.score>=55?'加油':'需改善'}）`,
+    `記錄天數：${r.n} 天`,``,
     `─ 飲食 ─`,
-    `平均每日攝取：${r.avgIntake} kcal（目標 ${GOAL} kcal）`,
-    `平均熱量赤字：${r.avgDeficit} kcal`,
-    `達標天數：${r.underGoalDays}/${r.n} 天`,
+    `平均每日攝取：${r.avgIntake} kcal（目標 ${GOAL}）`,
+    `平均赤字：${r.avgDeficit} kcal`,
+    `達標天數：${r.underGoalDays}/${r.n}`,``,
+    `─ 營養素 ─`,
+    `蛋白質：${r.avgProtein}g / 目標100g`,
+    `碳水：${r.avgCarb}g / 目標130g`,
+    `脂肪：${r.avgFat}g / 目標43g`,
+    r.trainDays>0?`重訓日：${r.trainDays} 天（蛋白目標+30g）`:'',
     ``,
-    `─ 三大營養素（每日平均）─`,
-    `蛋白質：${r.avgProtein}g（目標 100g）`,
-    `碳水：${r.avgCarb}g（目標 130g）`,
-    `脂肪：${r.avgFat}g（目標 43g）`,
-    r.trainDays>0 ? `重訓日：${r.trainDays} 天（蛋白質目標提升至 130g）` : '',
-    ``,
-    `─ 本週建議 ─`,
+    `─ 建議 ─`,
     ...r.tips.map(t=>`${t.type==='ok'?'✓':t.type==='warn'?'▲':'✕'} ${t.text}`),
     ``,
-    r.weightTrend ? `─ 體重 ─\n本週：${r.weightTrend.start}kg → ${r.weightTrend.end}kg（${r.weightTrend.diff}kg）` : '',
+    r.weightTrend?`─ 體重 ─\n${r.weightTrend.start}kg → ${r.weightTrend.end}kg（${r.weightTrend.diff}kg）`:'',
     ``,
     `Keep going Joanne! 💪`,
-  ].filter(l=>l!==undefined).join('\n');
-  window.location.href = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(lines)}`;
+  ].filter(Boolean).join('\n');
+  window.location.href=`mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
 }
 
 // ── BUILD MERGED CHART DATA (histDays + localStorage) ───────────────────────
