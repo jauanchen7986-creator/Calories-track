@@ -1143,7 +1143,9 @@ async function saveProfile() {
     applyProfile({ bmr:r.bmr, goal_cal:r.goalCal, weight_kg:weight, target_kg:target,
                    macro_protein:r.protein, macro_carb:r.carb, macro_fat:r.fat });
     document.getElementById('profileModal').style.display = 'none';
+    await migrateLocalStorage(); // upload any phone data now that profile is set
     renderCharts(); renderRecordsGrid(); updateWeightSummary(); renderWeeklyReport();
+    loadDayLog();
     toast('✓ 設定已儲存！', 'ok');
   } catch(e) { err.textContent = '儲存失敗，請稍後再試'; }
 }
