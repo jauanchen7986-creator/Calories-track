@@ -1757,27 +1757,42 @@ async function migrateLocalStorage() {
   let ok = 0;
   for (const entry of toMigrate) {
     try {
-      await fetch(`/api/logs/${entry.dateKey}`, {
+      const r = await fetch(`/api/logs/${entry.dateKey}`, {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({ foods: entry.foods, exercises: entry.exercises, weight: entry.weight })
       });
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
       dbLogs[entry.dateKey] = { date_key: entry.dateKey, ...entry };
       ok++;
-    } catch(e) {}
+    } catch(e) { console.error('Migration upload failed for', entry.dateKey, e); }
   }
-  toast(`✓ 已上傳 ${ok} 筆記錄到雲端！`, 'ok');
+  if (ok === toMigrate.length) {
+    toast(`✓ 已上傳全部 ${ok} 筆記錄到雲端！`, 'ok');
+  } else {
+    toast(`⚠️ 上傳完成：${ok}/${toMigrate.length} 筆，請稍後重試`);
+  }
   renderCharts(); renderRecordsGrid(); updateWeightSummary(); renderWeeklyReport();
 }
 
 async function initApp() {
   document.getElementById('logDate').value = todayStr();
   try {
-    const rows = await fetch('/api/logs').then(r => r.json());
+    const res = await fetch('/api/logs');
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const rows = await res.json();
     rows.forEach(row => { dbLogs[row.date_key] = row; });
   } catch(e) {
     console.error('Failed to load from server:', e);
-    toast('無法連線伺服器 ⚠️');
+    if (e.message?.includes('Failed to fetch') || e instanceof TypeError) {
+      toast('⚠️ 伺服器未啟動，請確認 Railway 已完成部署並加入 PostgreSQL');
+    } else {
+      toast(`⚠️ 伺服器錯誤：${e.message}`);
+    }
+    // Fall through so histDays still render
+    renderCharts(); renderRecordsGrid(); updateWeightSummary(); renderWeeklyReport();
+    loadDayLog();
+    return;
   }
   await migrateLocalStorage();
   renderCharts();
