@@ -29,7 +29,6 @@ async function initDB() {
   `);
 
   // If logs table exists but lacks user_id, drop and recreate
-  // (phone data will be re-migrated after user registers)
   const { rows } = await pool.query(`
     SELECT column_name FROM information_schema.columns
     WHERE table_name = 'logs' AND column_name = 'user_id'
@@ -48,6 +47,26 @@ async function initDB() {
       exercises JSONB   NOT NULL DEFAULT '[]',
       weight    REAL,
       PRIMARY KEY (date_key, user_id)
+    )
+  `);
+
+  // User profile table
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS user_profiles (
+      user_id       INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+      gender        TEXT,
+      age           INTEGER,
+      height_cm     REAL,
+      weight_kg     REAL,
+      target_kg     REAL,
+      activity      TEXT,
+      bmr           INTEGER,
+      tdee          INTEGER,
+      goal_cal      INTEGER,
+      macro_protein INTEGER,
+      macro_carb    INTEGER,
+      macro_fat     INTEGER,
+      updated_at    TIMESTAMPTZ DEFAULT NOW()
     )
   `);
 }
@@ -129,6 +148,39 @@ app.post('/api/login', async (req, res) => {
     console.error(e);
     res.status(500).json({ error: '伺服器錯誤' });
   }
+});
+
+// ── PROFILE ENDPOINTS ────────────────────────────────────────────────────────
+app.get('/api/profile', requireAuth, async (req, res) => {
+  try {
+    const { rows } = await pool.query(
+      'SELECT * FROM user_profiles WHERE user_id = $1',
+      [req.user.id]
+    );
+    res.json(rows[0] || null);
+  } catch (e) { console.error(e); res.status(500).json({ error: '伺服器錯誤' }); }
+});
+
+app.post('/api/profile', requireAuth, async (req, res) => {
+  const { gender, age, height_cm, weight_kg, target_kg, activity,
+          bmr, tdee, goal_cal, macro_protein, macro_carb, macro_fat } = req.body;
+  try {
+    await pool.query(`
+      INSERT INTO user_profiles
+        (user_id, gender, age, height_cm, weight_kg, target_kg, activity,
+         bmr, tdee, goal_cal, macro_protein, macro_carb, macro_fat, updated_at)
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,NOW())
+      ON CONFLICT (user_id) DO UPDATE SET
+        gender=EXCLUDED.gender, age=EXCLUDED.age, height_cm=EXCLUDED.height_cm,
+        weight_kg=EXCLUDED.weight_kg, target_kg=EXCLUDED.target_kg,
+        activity=EXCLUDED.activity, bmr=EXCLUDED.bmr, tdee=EXCLUDED.tdee,
+        goal_cal=EXCLUDED.goal_cal, macro_protein=EXCLUDED.macro_protein,
+        macro_carb=EXCLUDED.macro_carb, macro_fat=EXCLUDED.macro_fat,
+        updated_at=NOW()
+    `, [req.user.id, gender, age, height_cm, weight_kg, target_kg, activity,
+        bmr, tdee, goal_cal, macro_protein, macro_carb, macro_fat]);
+    res.json({ ok: true });
+  } catch (e) { console.error(e); res.status(500).json({ error: '伺服器錯誤' }); }
 });
 
 // ── LOG ENDPOINTS (auth required) ────────────────────────────────────────────

@@ -52,6 +52,36 @@ input,button,select,textarea{max-width:100%;}
 .auth-btn:hover{opacity:0.88;}
 .auth-btn:disabled{opacity:0.5;cursor:default;}
 .auth-error{color:#d94f4f;font-size:13px;margin-top:10px;text-align:center;min-height:18px;}
+.profile-modal{position:fixed;inset:0;background:rgba(35,28,28,0.45);z-index:9998;display:flex;align-items:center;justify-content:center;padding:20px;overflow-y:auto;}
+.profile-card{background:var(--card-bg);border-radius:28px;padding:36px 32px;width:100%;max-width:480px;box-shadow:0 16px 56px rgba(0,0,0,0.14);}
+.profile-title{font-size:22px;font-weight:800;color:var(--black);margin-bottom:4px;}
+.profile-sub{font-size:13px;color:var(--muted);margin-bottom:28px;}
+.prof-label{font-size:12px;font-weight:700;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:10px;}
+.prof-gender-row{display:flex;gap:10px;margin-bottom:20px;}
+.prof-gender-btn{flex:1;padding:12px;border:2px solid var(--border);border-radius:14px;background:var(--bg);font-size:15px;font-family:inherit;font-weight:600;cursor:pointer;color:var(--muted);transition:all .2s;}
+.prof-gender-btn.active{border-color:var(--pink);background:var(--pink-light);color:var(--pink);}
+.prof-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px;}
+.prof-field label{display:block;font-size:12px;font-weight:700;color:var(--muted);margin-bottom:6px;letter-spacing:.5px;}
+.prof-input-wrap{display:flex;align-items:center;gap:6px;border:1.5px solid var(--border);border-radius:12px;padding:0 12px;background:var(--bg);transition:border-color .2s;}
+.prof-input-wrap:focus-within{border-color:var(--pink);}
+.prof-input-wrap input{flex:1;border:none;background:none;padding:11px 0;font-size:15px;font-family:inherit;color:var(--text);min-width:0;}
+.prof-input-wrap input:focus{outline:none;}
+.prof-input-wrap span{font-size:13px;color:var(--muted);white-space:nowrap;}
+.prof-activity{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:20px;}
+.prof-act-btn{padding:10px 4px;border:2px solid var(--border);border-radius:12px;background:var(--bg);font-size:11px;font-family:inherit;cursor:pointer;color:var(--muted);text-align:center;line-height:1.5;transition:all .2s;}
+.prof-act-btn span{font-size:10px;color:var(--muted);}
+.prof-act-btn.active{border-color:var(--mint);background:var(--mint-light);color:var(--mint);}
+.prof-preview{background:var(--surface);border-radius:16px;padding:18px;margin-bottom:20px;}
+.prof-preview-title{font-size:12px;font-weight:700;color:var(--muted);letter-spacing:1px;margin-bottom:12px;}
+.prof-preview-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px;}
+.prof-kpi{text-align:center;}
+.prof-kpi>div:first-child{font-size:20px;font-weight:800;color:var(--black);font-family:'DM Mono',monospace;}
+.prof-kpi>div:last-child{font-size:11px;color:var(--muted);margin-top:2px;}
+.prof-macros-preview{display:flex;justify-content:space-around;font-size:13px;color:var(--muted);}
+.prof-macros-preview b{color:var(--black);}
+.prof-settings-link{text-align:center;margin-top:16px;font-size:13px;color:var(--muted);cursor:pointer;}
+.prof-settings-link:hover{color:var(--pink);}
+@media(max-width:480px){.prof-grid{grid-template-columns:1fr 1fr;}.prof-activity{grid-template-columns:repeat(2,1fr);}}
 .hero{background:var(--black);color:var(--white);padding:60px 40px 80px;position:relative;overflow:hidden;}
 .hero::before{content:'JOANNE';font-family:'Gaegu',sans-serif;font-size:180px;position:absolute;right:-10px;bottom:-30px;opacity:0.04;letter-spacing:-4px;line-height:1;pointer-events:none;font-weight:700;}
 .hero-grid{display:grid;grid-template-columns:1fr 1fr;gap:60px;max-width:1100px;margin:0 auto;align-items:center;}
@@ -397,6 +427,7 @@ svg.score-ring{width:80px;height:80px;transform:rotate(-90deg);}
       <div class="nav-link" onclick="document.getElementById('records').scrollIntoView({behavior:'smooth'})">歷史</div>
     </div>
     <div class="nav-tag" id="navTag">70→60KG · 2026</div>
+    <button class="logout-btn" id="settingsBtn" onclick="openProfileModal()" style="display:none">⚙️</button>
     <button class="logout-btn" id="logoutBtn" onclick="doLogout()" style="display:none">登出</button>
   </div>
 </header>
@@ -422,6 +453,76 @@ svg.score-ring{width:80px;height:80px;transform:rotate(-90deg);}
       <button class="auth-btn" id="registerBtn" onclick="doRegister()">建立帳號</button>
       <div class="auth-error" id="registerErr"></div>
     </div>
+  </div>
+</div>
+
+<!-- Profile setup modal -->
+<div id="profileModal" class="profile-modal" style="display:none">
+  <div class="profile-card">
+    <div class="profile-title">🎯 設定你的目標</div>
+    <div class="profile-sub">系統將自動計算你的每日建議攝取量</div>
+
+    <div class="prof-label">性別</div>
+    <div class="prof-gender-row">
+      <button class="prof-gender-btn active" id="genderF" onclick="setGender('female')">👩 女</button>
+      <button class="prof-gender-btn"        id="genderM" onclick="setGender('male')">👨 男</button>
+    </div>
+
+    <div class="prof-grid">
+      <div class="prof-field">
+        <label>年齡</label>
+        <div class="prof-input-wrap">
+          <input type="number" id="profAge" placeholder="25" min="10" max="100" oninput="updateProfilePreview()">
+          <span>歲</span>
+        </div>
+      </div>
+      <div class="prof-field">
+        <label>身高</label>
+        <div class="prof-input-wrap">
+          <input type="number" id="profHeight" placeholder="163" min="100" max="250" oninput="updateProfilePreview()">
+          <span>cm</span>
+        </div>
+      </div>
+      <div class="prof-field">
+        <label>目前體重</label>
+        <div class="prof-input-wrap">
+          <input type="number" id="profWeight" placeholder="70" min="30" max="300" step="0.1" oninput="updateProfilePreview()">
+          <span>kg</span>
+        </div>
+      </div>
+      <div class="prof-field">
+        <label>目標體重</label>
+        <div class="prof-input-wrap">
+          <input type="number" id="profTarget" placeholder="60" min="30" max="300" step="0.1" oninput="updateProfilePreview()">
+          <span>kg</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="prof-label">日常活動量</div>
+    <div class="prof-activity">
+      <button class="prof-act-btn active" data-act="sedentary" onclick="setActivity('sedentary')">🛋 久坐<br><span>幾乎不運動</span></button>
+      <button class="prof-act-btn" data-act="light"    onclick="setActivity('light')">🚶 輕度<br><span>每週 1-3 天</span></button>
+      <button class="prof-act-btn" data-act="moderate" onclick="setActivity('moderate')">🏃 中度<br><span>每週 3-5 天</span></button>
+      <button class="prof-act-btn" data-act="active"   onclick="setActivity('active')">💪 積極<br><span>每週 6-7 天</span></button>
+    </div>
+
+    <div class="prof-preview" id="profPreview" style="display:none">
+      <div class="prof-preview-title">📊 計算結果（每日）</div>
+      <div class="prof-preview-grid">
+        <div class="prof-kpi"><div id="pvBMR">—</div><div>基礎代謝</div></div>
+        <div class="prof-kpi"><div id="pvTDEE">—</div><div>總消耗</div></div>
+        <div class="prof-kpi" style="color:var(--pink)"><div id="pvGoal">—</div><div>目標攝取</div></div>
+      </div>
+      <div class="prof-macros-preview">
+        <span>蛋白質 <b id="pvP">—</b>g</span>
+        <span>碳水 <b id="pvC">—</b>g</span>
+        <span>脂肪 <b id="pvF">—</b>g</span>
+      </div>
+    </div>
+
+    <button class="auth-btn" onclick="saveProfile()">儲存並開始使用</button>
+    <div class="auth-error" id="profErr"></div>
   </div>
 </div>
 
@@ -858,7 +959,7 @@ const histDays=[
   {date:"3/24",wd:"週二",intake:1191,deficit:335,exercise:115,foods:[{n:"草莓高蛋白",c:147},{n:"路易莎拿鐵 M",c:109},{n:"麻辣雞胸肉",c:121},{n:"大溪黑豆干 150g",c:202},{n:"全家香辣醬粉絲煲",c:162},{n:"牛排 100g氣炸",c:150},{n:"青菜水煮",c:30},{n:"福樂超能蛋白牛乳奶茶 375ml",c:200},{n:"水煮蛋 1顆",c:70}],exs:[{n:"運動",c:115}],carb:97,protein:122,fat:37,note:"🏆 蛋白質122g 歷史最高！奶茶蛋白牛乳神操作"},
 ];
 
-const BMR=1411,GOAL=1300;
+let BMR=1411, GOAL=1300; // overwritten by user profile
 // In-memory cache of all DB rows, keyed by date_key (YYYY-MM-DD)
 let dbLogs = {};
 
@@ -939,15 +1040,116 @@ function doLogout() {
 
 function updateAuthHeader() {
   const tag = document.getElementById('navTag');
-  const btn = document.getElementById('logoutBtn');
+  const logoutBtn = document.getElementById('logoutBtn');
+  const settingsBtn = document.getElementById('settingsBtn');
   if (authUsername) {
     tag.textContent = authUsername;
-    btn.style.display = '';
+    logoutBtn.style.display = '';
+    settingsBtn.style.display = '';
   }
 }
+
+// ── PROFILE ───────────────────────────────────────────────────────────────────
+let _profGender   = 'female';
+let _profActivity = 'sedentary';
+
+function setGender(g) {
+  _profGender = g;
+  document.getElementById('genderF').classList.toggle('active', g === 'female');
+  document.getElementById('genderM').classList.toggle('active', g === 'male');
+  updateProfilePreview();
+}
+
+function setActivity(a) {
+  _profActivity = a;
+  document.querySelectorAll('.prof-act-btn').forEach(b =>
+    b.classList.toggle('active', b.dataset.act === a)
+  );
+  updateProfilePreview();
+}
+
+function calcProfileMacros(gender, age, heightCm, weightKg, targetKg, activity) {
+  // Mifflin-St Jeor BMR
+  const bmr = gender === 'female'
+    ? 10*weightKg + 6.25*heightCm - 5*age - 161
+    : 10*weightKg + 6.25*heightCm - 5*age + 5;
+  const mult = {sedentary:1.2, light:1.375, moderate:1.55, active:1.725}[activity] || 1.375;
+  const tdee = Math.round(bmr * mult);
+  // 500 kcal deficit for ~0.5 kg/week loss; floor at 1200
+  const goalCal  = Math.max(1200, tdee - 500);
+  const protein  = Math.round(weightKg * 2);       // 2 g/kg body weight
+  const fat      = Math.round(goalCal * 0.27 / 9); // 27% of calories
+  const carb     = Math.max(50, Math.round((goalCal - protein*4 - fat*9) / 4));
+  return { bmr: Math.round(bmr), tdee, goalCal, protein, fat, carb };
+}
+
+function updateProfilePreview() {
+  const age    = parseFloat(document.getElementById('profAge').value);
+  const height = parseFloat(document.getElementById('profHeight').value);
+  const weight = parseFloat(document.getElementById('profWeight').value);
+  const target = parseFloat(document.getElementById('profTarget').value);
+  if (!age || !height || !weight || !target) {
+    document.getElementById('profPreview').style.display = 'none';
+    return;
+  }
+  const r = calcProfileMacros(_profGender, age, height, weight, target, _profActivity);
+  document.getElementById('pvBMR').textContent  = r.bmr;
+  document.getElementById('pvTDEE').textContent = r.tdee;
+  document.getElementById('pvGoal').textContent = r.goalCal;
+  document.getElementById('pvP').textContent    = r.protein;
+  document.getElementById('pvC').textContent    = r.carb;
+  document.getElementById('pvF').textContent    = r.fat;
+  document.getElementById('profPreview').style.display = '';
+}
+
+function applyProfile(p) {
+  BMR          = p.bmr      || 1411;
+  GOAL         = p.goal_cal || 1300;
+  WEIGHT_START = p.weight_kg || 70;
+  WEIGHT_GOAL  = p.target_kg || 60;
+  MACRO_STD    = { protein: p.macro_protein, carb: p.macro_carb, fat: p.macro_fat };
+  MACRO_TRAIN  = {
+    protein: Math.round(p.macro_protein * 1.3),
+    carb:    Math.round(p.macro_carb    * 1.1),
+    fat:     p.macro_fat
+  };
+}
+
+function openProfileModal() {
+  document.getElementById('profileModal').style.display = 'flex';
+}
+
+async function saveProfile() {
+  const age    = parseInt(document.getElementById('profAge').value);
+  const height = parseFloat(document.getElementById('profHeight').value);
+  const weight = parseFloat(document.getElementById('profWeight').value);
+  const target = parseFloat(document.getElementById('profTarget').value);
+  const err    = document.getElementById('profErr');
+  err.textContent = '';
+  if (!age || !height || !weight || !target) { err.textContent = '請填寫所有欄位'; return; }
+  const r = calcProfileMacros(_profGender, age, height, weight, target, _profActivity);
+  try {
+    const res = await fetch('/api/profile', {
+      method: 'POST',
+      headers: authHeaders(),
+      body: JSON.stringify({
+        gender: _profGender, age, height_cm: height, weight_kg: weight,
+        target_kg: target, activity: _profActivity,
+        bmr: r.bmr, tdee: r.tdee, goal_cal: r.goalCal,
+        macro_protein: r.protein, macro_carb: r.carb, macro_fat: r.fat
+      })
+    });
+    if (!res.ok) throw new Error();
+    applyProfile({ bmr:r.bmr, goal_cal:r.goalCal, weight_kg:weight, target_kg:target,
+                   macro_protein:r.protein, macro_carb:r.carb, macro_fat:r.fat });
+    document.getElementById('profileModal').style.display = 'none';
+    renderCharts(); renderRecordsGrid(); updateWeightSummary(); renderWeeklyReport();
+    toast('✓ 設定已儲存！', 'ok');
+  } catch(e) { err.textContent = '儲存失敗，請稍後再試'; }
+}
 // Macro daily goals (g)
-const MACRO_STD   = {protein:100, carb:130, fat:43};   // 一般日
-const MACRO_TRAIN = {protein:130, carb:150, fat:43};   // 重訓日 +30g蛋白質
+let MACRO_STD   = {protein:100, carb:130, fat:43};   // overwritten by user profile
+let MACRO_TRAIN = {protein:130, carb:150, fat:43};
 const TRAIN_KW    = ['重訓','臀腿','上半身','深蹲','硬舉','胸肌','背肌','肩膀','二頭','三頭','胸背','健身'];
 
 function detectTraining(exs) {
@@ -1293,7 +1495,7 @@ function buildChartData() {
 }
 
 // ── WEIGHT TRACKING ─────────────────────────────────────────────────────────
-const WEIGHT_START = 70.0, WEIGHT_GOAL = 60.0;
+let WEIGHT_START = 70.0, WEIGHT_GOAL = 60.0; // overwritten by user profile
 
 function getWeightHistory() {
   return Object.values(dbLogs)
@@ -1927,6 +2129,26 @@ async function initApp() {
     loadDayLog();
     return;
   }
+  // Load user profile
+  try {
+    const pr = await fetch('/api/profile', { headers: authHeaders() });
+    const profile = pr.ok ? await pr.json() : null;
+    if (!profile) {
+      document.getElementById('profileModal').style.display = 'flex';
+      return; // wait until profile saved, then re-render
+    }
+    applyProfile(profile);
+    // Pre-fill profile form with existing values
+    _profGender   = profile.gender   || 'female';
+    _profActivity = profile.activity || 'sedentary';
+    document.getElementById('profAge').value    = profile.age       || '';
+    document.getElementById('profHeight').value = profile.height_cm || '';
+    document.getElementById('profWeight').value = profile.weight_kg || '';
+    document.getElementById('profTarget').value = profile.target_kg || '';
+    setGender(_profGender);
+    setActivity(_profActivity);
+  } catch(e) { console.error('Profile load failed', e); }
+
   await migrateLocalStorage();
   renderCharts();
   updateWeightSummary();
