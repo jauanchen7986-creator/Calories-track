@@ -818,6 +818,8 @@ const histDays=[
 ];
 
 const BMR=1411,GOAL=1300;
+// In-memory cache of all DB rows, keyed by date_key (YYYY-MM-DD)
+let dbLogs = {};
 // Macro daily goals (g)
 const MACRO_STD   = {protein:100, carb:130, fat:43};   // 一般日
 const MACRO_TRAIN = {protein:130, carb:150, fat:43};   // 重訓日 +30g蛋白質
@@ -889,26 +891,25 @@ function buildFullDayData() {
     map[key] = { dateKey:key, date:d.date, wd:d.wd, intake:d.intake, exercise:d.exercise||0, deficit:d.deficit,
                  carb:d.carb||0, protein:d.protein||0, fat:d.fat||0, exs:d.exs||[] };
   });
-  for (let i = 0; i < localStorage.length; i++) {
-    const lsKey = localStorage.key(i);
-    if (!lsKey?.startsWith('jlog_') || lsKey.endsWith('_ex') || lsKey.endsWith('_w')) continue;
-    const dateKey = lsKey.replace('jlog_','');
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(dateKey)) continue;
-    try {
-      const foods = JSON.parse(localStorage.getItem(lsKey)||'[]');
-      const exs   = JSON.parse(localStorage.getItem(lsKey+'_ex')||'[]');
-      if (!foods.length && !exs.length) continue;
-      const intake   = foods.reduce((s,f)=>s+f.cal,0);
-      const exercise = exs.reduce((s,e)=>s+e.cal,0);
-      const existing = map[dateKey]||{};
-      map[dateKey] = { dateKey, date:existing.date||dateKey.slice(5), intake, exercise,
-                       deficit: BMR+exercise-intake,
-                       carb:    foods.reduce((s,f)=>s+(f.carb||0),0)||existing.carb||0,
-                       protein: foods.reduce((s,f)=>s+(f.protein||0),0)||existing.protein||0,
-                       fat:     foods.reduce((s,f)=>s+(f.fat||0),0)||existing.fat||0,
-                       exs };
-    } catch {}
-  }
+  Object.values(dbLogs).forEach(row => {
+    const dateKey = row.date_key;
+    const foods = row.foods || [];
+    const exs   = row.exercises || [];
+    if (!foods.length && !exs.length) return;
+    const intake   = foods.reduce((s,f)=>s+(f.cal||0),0);
+    const exercise = exs.reduce((s,e)=>s+(e.cal||0),0);
+    const existing = map[dateKey] || {};
+    const dt = new Date(dateKey + 'T00:00:00');
+    const wdNames = ['週日','週一','週二','週三','週四','週五','週六'];
+    map[dateKey] = { dateKey,
+      date: existing.date || `${dt.getMonth()+1}/${dt.getDate()}`,
+      wd:   existing.wd   || wdNames[dt.getDay()],
+      intake, exercise, deficit: BMR+exercise-intake,
+      carb:    foods.reduce((s,f)=>s+(f.carb||0),0)    || existing.carb    || 0,
+      protein: foods.reduce((s,f)=>s+(f.protein||0),0) || existing.protein || 0,
+      fat:     foods.reduce((s,f)=>s+(f.fat||0),0)     || existing.fat     || 0,
+      exs };
+  });
   return Object.entries(map).sort((a,b)=>a[0].localeCompare(b[0])).map(([,d])=>d);
 }
 
@@ -1152,23 +1153,17 @@ function buildChartData() {
     const key = `2026-${String(parts[0]).padStart(2,'0')}-${String(parts[1]).padStart(2,'0')}`;
     map[key] = { dateKey: key, date: d.date, wd: d.wd, intake: d.intake, exercise: d.exercise, deficit: d.deficit };
   });
-  for (let i = 0; i < localStorage.length; i++) {
-    const lsKey = localStorage.key(i);
-    if (!lsKey || !lsKey.startsWith('jlog_') || lsKey.endsWith('_ex')) continue;
-    const dateKey = lsKey.replace('jlog_', '');
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(dateKey)) continue;
-    try {
-      const foods = JSON.parse(localStorage.getItem(lsKey) || '[]');
-      const exs   = JSON.parse(localStorage.getItem(lsKey + '_ex') || '[]');
-      if (foods.length === 0 && exs.length === 0) continue;
-      const intake   = foods.reduce((s, f) => s + f.cal, 0);
-      const exercise = exs.reduce((s, e) => s + e.cal, 0);
-      const deficit  = BMR + exercise - intake;
-      const dt = new Date(dateKey + 'T00:00:00');
-      const dateDisplay = `${dt.getMonth()+1}/${dt.getDate()}`;
-      map[dateKey] = { dateKey, date: dateDisplay, intake, exercise, deficit };
-    } catch(e) {}
-  }
+  Object.values(dbLogs).forEach(row => {
+    const dateKey = row.date_key;
+    const foods = row.foods || [];
+    const exs   = row.exercises || [];
+    if (!foods.length && !exs.length) return;
+    const intake   = foods.reduce((s, f) => s + (f.cal||0), 0);
+    const exercise = exs.reduce((s, e) => s + (e.cal||0), 0);
+    const deficit  = BMR + exercise - intake;
+    const dt = new Date(dateKey + 'T00:00:00');
+    map[dateKey] = { dateKey, date: `${dt.getMonth()+1}/${dt.getDate()}`, intake, exercise, deficit };
+  });
   return Object.entries(map).sort((a, b) => a[0].localeCompare(b[0])).map(([, d]) => d);
 }
 
@@ -1176,16 +1171,10 @@ function buildChartData() {
 const WEIGHT_START = 70.0, WEIGHT_GOAL = 60.0;
 
 function getWeightHistory() {
-  const weights = [];
-  for (let i = 0; i < localStorage.length; i++) {
-    const key = localStorage.key(i);
-    if (!key || !key.startsWith('jlog_') || !key.endsWith('_w')) continue;
-    const dateKey = key.slice(5, -2);
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(dateKey)) continue;
-    const w = parseFloat(localStorage.getItem(key));
-    if (!isNaN(w) && w > 0) weights.push({ dateKey, weight: w });
-  }
-  return weights.sort((a, b) => a.dateKey.localeCompare(b.dateKey));
+  return Object.values(dbLogs)
+    .filter(row => row.weight && row.weight > 0)
+    .map(row => ({ dateKey: row.date_key, weight: row.weight }))
+    .sort((a, b) => a.dateKey.localeCompare(b.dateKey));
 }
 
 function updateWeightSummary() {
@@ -1351,9 +1340,7 @@ function renderCharts() {
   document.getElementById('cKg').textContent = (total / 7700).toFixed(2);
   document.getElementById('cAvg').textContent = Math.round(total / days.length);
 }
-renderCharts();
-updateWeightSummary();
-renderWeeklyReport();
+// initApp() called at end of script after all functions are defined
 
 function switchTab(tab,el){
   document.querySelectorAll('.chart-tab').forEach(t=>t.classList.remove('active'));el.classList.add('active');
@@ -1366,7 +1353,7 @@ function switchTab(tab,el){
 // LOGGER
 let logFoods=[],logExs=[];
 function todayStr(){const d=new Date();return`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;}
-document.getElementById('logDate').value=todayStr();
+
 
 // Convert date string like "3/11" to "2026-03-11"
 function histDateToKey(dateStr){
@@ -1374,25 +1361,24 @@ function histDateToKey(dateStr){
   return`2026-${String(parts[0]).padStart(2,'0')}-${String(parts[1]).padStart(2,'0')}`;
 }
 
-function loadDayLog(){
-  const dateVal=document.getElementById('logDate').value;
-  const k=`jlog_${dateVal}`;
-  const saved=localStorage.getItem(k);
-  if(saved){
-    try{logFoods=JSON.parse(saved);logExs=JSON.parse(localStorage.getItem(k+'_ex')||'[]');}
-    catch{logFoods=[];logExs=[];}
+function loadDayLog() {
+  const dateVal = document.getElementById('logDate').value;
+  const row = dbLogs[dateVal];
+  if (row) {
+    logFoods = row.foods     || [];
+    logExs   = row.exercises || [];
+    document.getElementById('todayWeight').value = row.weight || '';
   } else {
-    const match=histDays.find(d=>histDateToKey(d.date)===dateVal);
-    if(match){
-      logFoods=match.foods.map(f=>({name:f.n,cal:f.c}));
-      logExs=match.exs.map(e=>({name:e.n,cal:e.c}));
+    const match = histDays.find(d => histDateToKey(d.date) === dateVal);
+    if (match) {
+      logFoods = match.foods.map(f => ({name:f.n, cal:f.c}));
+      logExs   = match.exs.map(e => ({name:e.n, cal:e.c}));
       toast('已載入歷史記錄，修改後請儲存 💾');
     } else {
-      logFoods=[];logExs=[];
+      logFoods = []; logExs = [];
     }
+    document.getElementById('todayWeight').value = '';
   }
-  const savedW=localStorage.getItem(k+'_w');
-  document.getElementById('todayWeight').value=savedW||'';
   renderLog();
 }
 
@@ -1402,7 +1388,6 @@ function loadHistDay(dateStr){
   document.getElementById('logger').scrollIntoView({behavior:'smooth'});
   toast('已載入 '+dateStr+' 的記錄，修改後請儲存 💾','ok');
 }
-loadDayLog();
 function renderLog(){
   const fl=document.getElementById('foodList'),el=document.getElementById('exList');
   fl.innerHTML='';logFoods.forEach((f,i)=>{const li=document.createElement('li');li.className='log-item';const macroTip=(f.carb||f.protein||f.fat)?`<div class="log-macros">碳${f.carb||0}g 蛋${f.protein||0}g 脂${f.fat||0}g</div>`:'';li.innerHTML=`<div><span class="log-name">${f.name}</span>${macroTip}</div><div class="log-right"><span class="log-cal pc">${f.cal} kcal</span><button class="del-btn" onclick="rmFood(${i})">×</button></div>`;fl.appendChild(li);});
@@ -1432,16 +1417,21 @@ function addEx(){
 }
 function rmFood(i){logFoods.splice(i,1);renderLog();}
 function rmEx(i){logExs.splice(i,1);renderLog();}
-function saveLog(){
-  const k=`jlog_${document.getElementById('logDate').value}`;
-  const w=parseFloat(document.getElementById('todayWeight').value);
-  try{
-    localStorage.setItem(k,JSON.stringify(logFoods));
-    localStorage.setItem(k+'_ex',JSON.stringify(logExs));
-    if(!isNaN(w)&&w>0) localStorage.setItem(k+'_w',w);
-    renderRecordsGrid();renderCharts();updateWeightSummary();
-    toast('✓ 記錄已儲存！','ok');
-  }catch{toast('儲存失敗 ⚠️');}
+async function saveLog() {
+  const dateVal = document.getElementById('logDate').value;
+  const w = parseFloat(document.getElementById('todayWeight').value);
+  const weight = (!isNaN(w) && w > 0) ? w : null;
+  try {
+    const res = await fetch(`/api/logs/${dateVal}`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ foods: logFoods, exercises: logExs, weight })
+    });
+    if (!res.ok) throw new Error('server error');
+    dbLogs[dateVal] = { date_key: dateVal, foods: logFoods, exercises: logExs, weight };
+    renderRecordsGrid(); renderCharts(); updateWeightSummary(); renderWeeklyReport();
+    toast('✓ 記錄已儲存！', 'ok');
+  } catch(e) { toast('儲存失敗，請檢查網路 ⚠️'); }
 }
 function clearLog(){if(!confirm('確定要清除今日記錄嗎？'))return;logFoods=[];logExs=[];renderLog();toast('已清除今日記錄');}
 function addFromCalc(){
@@ -1499,35 +1489,30 @@ function renderRecordsGrid() {
     allDays[key] = { ...d };
   });
 
-  // Load localStorage entries (override histDays if same date)
-  for (let i = 0; i < localStorage.length; i++) {
-    const lsKey = localStorage.key(i);
-    if (!lsKey || !lsKey.startsWith('jlog_') || lsKey.endsWith('_ex')) continue;
-    const dateKey = lsKey.replace('jlog_', '');
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(dateKey)) continue;
-    try {
-      const foods = JSON.parse(localStorage.getItem(lsKey) || '[]');
-      const exs = JSON.parse(localStorage.getItem(lsKey + '_ex') || '[]');
-      if (foods.length === 0 && exs.length === 0) continue;
-      const intake = foods.reduce((s, f) => s + f.cal, 0);
-      const exercise = exs.reduce((s, e) => s + e.cal, 0);
-      const deficit = BMR + exercise - intake;
-      const dt = new Date(dateKey + 'T00:00:00');
-      const wdNames = ['週日','週一','週二','週三','週四','週五','週六'];
-      const existing = allDays[dateKey] || {};
-      allDays[dateKey] = {
-        date: `${dt.getMonth()+1}/${dt.getDate()}`,
-        wd: wdNames[dt.getDay()],
-        intake, exercise, deficit,
-        foods: foods.map(f => ({n: f.name, c: f.cal})),
-        exs: exs.map(e => ({n: e.name, c: e.cal})),
-        carb:    foods.reduce((s,f)=>s+(f.carb||0),0) || existing.carb || 0,
-        protein: foods.reduce((s,f)=>s+(f.protein||0),0) || existing.protein || 0,
-        fat:     foods.reduce((s,f)=>s+(f.fat||0),0) || existing.fat || 0,
-        note: existing.note || ''
-      };
-    } catch(e) {}
-  }
+  // Load DB entries (override histDays if same date)
+  Object.values(dbLogs).forEach(row => {
+    const dateKey = row.date_key;
+    const foods = row.foods     || [];
+    const exs   = row.exercises || [];
+    if (!foods.length && !exs.length) return;
+    const intake   = foods.reduce((s, f) => s + (f.cal||0), 0);
+    const exercise = exs.reduce((s, e) => s + (e.cal||0), 0);
+    const deficit  = BMR + exercise - intake;
+    const dt = new Date(dateKey + 'T00:00:00');
+    const wdNames  = ['週日','週一','週二','週三','週四','週五','週六'];
+    const existing = allDays[dateKey] || {};
+    allDays[dateKey] = {
+      date: `${dt.getMonth()+1}/${dt.getDate()}`,
+      wd:   wdNames[dt.getDay()],
+      intake, exercise, deficit,
+      foods: foods.map(f => ({n: f.name||f.n, c: f.cal||f.c})),
+      exs:   exs.map(e => ({n: e.name||e.n, c: e.cal||e.c})),
+      carb:    foods.reduce((s,f)=>s+(f.carb||0),0)    || existing.carb    || 0,
+      protein: foods.reduce((s,f)=>s+(f.protein||0),0) || existing.protein || 0,
+      fat:     foods.reduce((s,f)=>s+(f.fat||0),0)     || existing.fat     || 0,
+      note: existing.note || ''
+    };
+  });
 
   Object.entries(allDays).sort((a, b) => b[0].localeCompare(a[0])).forEach(([dateKey, d]) => {
     document.getElementById('recordsGrid').appendChild(buildDayCard(d, dateKey));
@@ -1540,8 +1525,6 @@ function editDay(dateKey) {
   document.getElementById('logger').scrollIntoView({behavior: 'smooth'});
   toast('✓ 已載入 ' + dateKey + ' 的記錄，修改後按儲存即可更新', 'ok');
 }
-
-renderRecordsGrid();
 
 function toast(msg,type=''){
   const t=document.getElementById('toast');t.textContent=msg;t.className=`toast ${type} show`;
@@ -1749,6 +1732,62 @@ function deleteCustomDB(i) {
     toast('已從資料庫移除');
   } catch(e) {}
 }
+
+// ── APP INIT & MIGRATION ─────────────────────────────────────────────────────
+async function migrateLocalStorage() {
+  const toMigrate = [];
+  for (let i = 0; i < localStorage.length; i++) {
+    const lsKey = localStorage.key(i);
+    if (!lsKey?.startsWith('jlog_') ||
+        lsKey.endsWith('_ex') || lsKey.endsWith('_w') ||
+        lsKey === 'jlog_custom_db') continue;
+    const dateKey = lsKey.replace('jlog_', '');
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(dateKey)) continue;
+    if (dbLogs[dateKey]) continue; // already synced
+    try {
+      const foods = JSON.parse(localStorage.getItem(lsKey) || '[]');
+      const exs   = JSON.parse(localStorage.getItem(lsKey + '_ex') || '[]');
+      const w     = parseFloat(localStorage.getItem(lsKey + '_w'));
+      if (!foods.length && !exs.length) continue;
+      toMigrate.push({ dateKey, foods, exercises: exs, weight: isNaN(w) ? null : w });
+    } catch(e) {}
+  }
+  if (toMigrate.length === 0) return;
+  if (!confirm(`找到 ${toMigrate.length} 筆本地記錄尚未同步到雲端，要上傳嗎？`)) return;
+  let ok = 0;
+  for (const entry of toMigrate) {
+    try {
+      await fetch(`/api/logs/${entry.dateKey}`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ foods: entry.foods, exercises: entry.exercises, weight: entry.weight })
+      });
+      dbLogs[entry.dateKey] = { date_key: entry.dateKey, ...entry };
+      ok++;
+    } catch(e) {}
+  }
+  toast(`✓ 已上傳 ${ok} 筆記錄到雲端！`, 'ok');
+  renderCharts(); renderRecordsGrid(); updateWeightSummary(); renderWeeklyReport();
+}
+
+async function initApp() {
+  document.getElementById('logDate').value = todayStr();
+  try {
+    const rows = await fetch('/api/logs').then(r => r.json());
+    rows.forEach(row => { dbLogs[row.date_key] = row; });
+  } catch(e) {
+    console.error('Failed to load from server:', e);
+    toast('無法連線伺服器 ⚠️');
+  }
+  await migrateLocalStorage();
+  renderCharts();
+  updateWeightSummary();
+  renderWeeklyReport();
+  renderRecordsGrid();
+  loadDayLog();
+}
+
+initApp();
 </script>
 </body>
 </html>
