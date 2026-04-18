@@ -36,6 +36,22 @@ input,button,select,textarea{max-width:100%;}
 .nav-link{font-size:11px;padding:6px 14px;border-radius:100px;color:rgba(255,255,255,0.5);cursor:pointer;transition:all 0.2s;letter-spacing:1px;}
 .nav-link:hover{background:var(--pink);color:var(--white);}
 .nav-tag{font-size:10px;letter-spacing:2px;padding:4px 12px;border:1px solid rgba(255,255,255,0.2);border-radius:100px;color:rgba(255,255,255,0.6);font-family:'DM Mono',monospace;}
+.logout-btn{font-size:11px;padding:5px 12px;border-radius:100px;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.2);color:rgba(255,255,255,0.6);cursor:pointer;font-family:inherit;letter-spacing:0.5px;}
+.logout-btn:hover{background:rgba(255,255,255,0.15);color:#fff;}
+.auth-screen{position:fixed;inset:0;background:var(--bg);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;}
+.auth-card{background:var(--card-bg);border-radius:28px;padding:44px 36px;width:100%;max-width:400px;box-shadow:0 12px 48px rgba(0,0,0,0.10);}
+.auth-logo{font-family:'Caveat',cursive;font-size:32px;font-weight:700;text-align:center;margin-bottom:6px;color:var(--black);}
+.auth-logo span{color:var(--pink);}
+.auth-sub{text-align:center;color:var(--muted);font-size:13px;margin-bottom:28px;letter-spacing:0.5px;}
+.auth-tabs{display:flex;gap:6px;margin-bottom:24px;background:var(--surface);border-radius:14px;padding:4px;}
+.auth-tab{flex:1;padding:10px;border:none;background:none;border-radius:10px;font-size:14px;font-family:inherit;cursor:pointer;color:var(--muted);font-weight:600;transition:all .2s;}
+.auth-tab.active{background:var(--card-bg);color:var(--black);box-shadow:0 2px 8px rgba(0,0,0,0.08);}
+.auth-input{width:100%;padding:13px 16px;border:1.5px solid var(--border);border-radius:12px;font-size:15px;font-family:inherit;background:var(--bg);color:var(--text);margin-bottom:12px;box-sizing:border-box;transition:border-color .2s;}
+.auth-input:focus{outline:none;border-color:var(--pink);}
+.auth-btn{width:100%;padding:14px;background:var(--pink);color:#fff;border:none;border-radius:12px;font-size:16px;font-weight:700;font-family:inherit;cursor:pointer;margin-top:4px;letter-spacing:0.5px;transition:opacity .2s;}
+.auth-btn:hover{opacity:0.88;}
+.auth-btn:disabled{opacity:0.5;cursor:default;}
+.auth-error{color:#d94f4f;font-size:13px;margin-top:10px;text-align:center;min-height:18px;}
 .hero{background:var(--black);color:var(--white);padding:60px 40px 80px;position:relative;overflow:hidden;}
 .hero::before{content:'JOANNE';font-family:'Gaegu',sans-serif;font-size:180px;position:absolute;right:-10px;bottom:-30px;opacity:0.04;letter-spacing:-4px;line-height:1;pointer-events:none;font-weight:700;}
 .hero-grid{display:grid;grid-template-columns:1fr 1fr;gap:60px;max-width:1100px;margin:0 auto;align-items:center;}
@@ -380,9 +396,34 @@ svg.score-ring{width:80px;height:80px;transform:rotate(-90deg);}
       <div class="nav-link" onclick="document.getElementById('logger').scrollIntoView({behavior:'smooth'})">記錄</div>
       <div class="nav-link" onclick="document.getElementById('records').scrollIntoView({behavior:'smooth'})">歷史</div>
     </div>
-    <div class="nav-tag">70→60KG · 2026</div>
+    <div class="nav-tag" id="navTag">70→60KG · 2026</div>
+    <button class="logout-btn" id="logoutBtn" onclick="doLogout()" style="display:none">登出</button>
   </div>
 </header>
+
+<div id="authScreen" class="auth-screen">
+  <div class="auth-card">
+    <div class="auth-logo">J<span>.</span>LOG</div>
+    <div class="auth-sub">卡路里記錄 · 跨裝置同步</div>
+    <div class="auth-tabs">
+      <button class="auth-tab active" id="tabLogin"    onclick="switchAuthTab('login')">登入</button>
+      <button class="auth-tab"        id="tabRegister" onclick="switchAuthTab('register')">註冊帳號</button>
+    </div>
+    <div id="authLoginForm">
+      <input class="auth-input" id="authUser" placeholder="用戶名稱" autocomplete="username">
+      <input class="auth-input" id="authPass" type="password" placeholder="密碼" autocomplete="current-password">
+      <button class="auth-btn" id="loginBtn" onclick="doLogin()">登入</button>
+      <div class="auth-error" id="loginErr"></div>
+    </div>
+    <div id="authRegisterForm" style="display:none">
+      <input class="auth-input" id="regUser"    placeholder="用戶名稱" autocomplete="username">
+      <input class="auth-input" id="regPass"    type="password" placeholder="密碼（至少 6 位）" autocomplete="new-password">
+      <input class="auth-input" id="regConfirm" type="password" placeholder="確認密碼" autocomplete="new-password">
+      <button class="auth-btn" id="registerBtn" onclick="doRegister()">建立帳號</button>
+      <div class="auth-error" id="registerErr"></div>
+    </div>
+  </div>
+</div>
 
 <section class="hero">
   <div class="hero-grid">
@@ -820,6 +861,90 @@ const histDays=[
 const BMR=1411,GOAL=1300;
 // In-memory cache of all DB rows, keyed by date_key (YYYY-MM-DD)
 let dbLogs = {};
+
+// ── AUTH ─────────────────────────────────────────────────────────────────────
+let authToken    = localStorage.getItem('jlog_token')    || '';
+let authUsername = localStorage.getItem('jlog_username') || '';
+
+function authHeaders() {
+  return { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` };
+}
+
+function switchAuthTab(tab) {
+  document.getElementById('authLoginForm').style.display    = tab === 'login'    ? '' : 'none';
+  document.getElementById('authRegisterForm').style.display = tab === 'register' ? '' : 'none';
+  document.getElementById('tabLogin').classList.toggle('active',    tab === 'login');
+  document.getElementById('tabRegister').classList.toggle('active', tab === 'register');
+}
+
+async function doLogin() {
+  const btn = document.getElementById('loginBtn');
+  const err = document.getElementById('loginErr');
+  const username = document.getElementById('authUser').value.trim();
+  const password = document.getElementById('authPass').value;
+  err.textContent = '';
+  btn.disabled = true; btn.textContent = '登入中…';
+  try {
+    const res = await fetch('/api/login', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ username, password })
+    });
+    const data = await res.json();
+    if (!res.ok) { err.textContent = data.error || '登入失敗'; return; }
+    authToken = data.token; authUsername = data.username;
+    localStorage.setItem('jlog_token', authToken);
+    localStorage.setItem('jlog_username', authUsername);
+    document.getElementById('authScreen').style.display = 'none';
+    updateAuthHeader();
+    initApp();
+  } catch(e) { err.textContent = '無法連線伺服器'; }
+  finally { btn.disabled = false; btn.textContent = '登入'; }
+}
+
+async function doRegister() {
+  const btn = document.getElementById('registerBtn');
+  const err = document.getElementById('registerErr');
+  const username = document.getElementById('regUser').value.trim();
+  const password = document.getElementById('regPass').value;
+  const confirm  = document.getElementById('regConfirm').value;
+  err.textContent = '';
+  if (!username || !password) { err.textContent = '請填寫所有欄位'; return; }
+  if (password !== confirm)   { err.textContent = '兩次密碼不一致'; return; }
+  btn.disabled = true; btn.textContent = '建立中…';
+  try {
+    const res = await fetch('/api/register', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ username, password })
+    });
+    const data = await res.json();
+    if (!res.ok) { err.textContent = data.error || '註冊失敗'; return; }
+    authToken = data.token; authUsername = data.username;
+    localStorage.setItem('jlog_token', authToken);
+    localStorage.setItem('jlog_username', authUsername);
+    document.getElementById('authScreen').style.display = 'none';
+    updateAuthHeader();
+    initApp();
+  } catch(e) { err.textContent = '無法連線伺服器'; }
+  finally { btn.disabled = false; btn.textContent = '建立帳號'; }
+}
+
+function doLogout() {
+  if (!confirm('確定要登出嗎？')) return;
+  localStorage.removeItem('jlog_token');
+  localStorage.removeItem('jlog_username');
+  location.reload();
+}
+
+function updateAuthHeader() {
+  const tag = document.getElementById('navTag');
+  const btn = document.getElementById('logoutBtn');
+  if (authUsername) {
+    tag.textContent = authUsername;
+    btn.style.display = '';
+  }
+}
 // Macro daily goals (g)
 const MACRO_STD   = {protein:100, carb:130, fat:43};   // 一般日
 const MACRO_TRAIN = {protein:130, carb:150, fat:43};   // 重訓日 +30g蛋白質
@@ -1424,7 +1549,7 @@ async function saveLog() {
   try {
     const res = await fetch(`/api/logs/${dateVal}`, {
       method: 'POST',
-      headers: {'Content-Type': 'application/json'},
+      headers: authHeaders(),
       body: JSON.stringify({ foods: logFoods, exercises: logExs, weight })
     });
     if (!res.ok) throw new Error('server error');
@@ -1759,7 +1884,7 @@ async function migrateLocalStorage() {
     try {
       const r = await fetch(`/api/logs/${entry.dateKey}`, {
         method: 'POST',
-        headers: {'Content-Type': 'application/json'},
+        headers: authHeaders(),
         body: JSON.stringify({ foods: entry.foods, exercises: entry.exercises, weight: entry.weight })
       });
       if (!r.ok) throw new Error(`HTTP ${r.status}`);
@@ -1777,19 +1902,27 @@ async function migrateLocalStorage() {
 
 async function initApp() {
   document.getElementById('logDate').value = todayStr();
+  // Show auth screen if not logged in
+  if (!authToken) {
+    document.getElementById('authScreen').style.display = 'flex';
+    return;
+  }
+  document.getElementById('authScreen').style.display = 'none';
+  updateAuthHeader();
   try {
-    const res = await fetch('/api/logs');
+    const res = await fetch('/api/logs', { headers: authHeaders() });
+    if (res.status === 401) {
+      // Token expired — force re-login
+      localStorage.removeItem('jlog_token');
+      document.getElementById('authScreen').style.display = 'flex';
+      return;
+    }
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const rows = await res.json();
     rows.forEach(row => { dbLogs[row.date_key] = row; });
   } catch(e) {
     console.error('Failed to load from server:', e);
-    if (e.message?.includes('Failed to fetch') || e instanceof TypeError) {
-      toast('⚠️ 伺服器未啟動，請確認 Railway 已完成部署並加入 PostgreSQL');
-    } else {
-      toast(`⚠️ 伺服器錯誤：${e.message}`);
-    }
-    // Fall through so histDays still render
+    toast(`⚠️ 伺服器錯誤：${e.message}`);
     renderCharts(); renderRecordsGrid(); updateWeightSummary(); renderWeeklyReport();
     loadDayLog();
     return;
