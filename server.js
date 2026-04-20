@@ -18,82 +18,98 @@ function getToken(req) {
 }
 
 async function initDB() {
-  // Drop old user_id-based schema if it exists
-  const { rows: hasUserId } = await pool.query(`
-    SELECT column_name FROM information_schema.columns
-    WHERE table_name='logs' AND column_name='user_id'
-  `);
-  if (hasUserId.length > 0) {
-    await pool.query('DROP TABLE IF EXISTS logs');
-    console.log('Dropped old user_id logs table');
-  }
-
-  // Migrate logs to multi-token schema if needed
-  const { rows: logsTable } = await pool.query(`
-    SELECT table_name FROM information_schema.tables WHERE table_name='logs'
-  `);
-  if (logsTable.length > 0) {
-    const { rows: hasToken } = await pool.query(`
+  // 1. Drop old user_id schema if present
+  try {
+    const { rows } = await pool.query(`
       SELECT column_name FROM information_schema.columns
-      WHERE table_name='logs' AND column_name='user_token'
+      WHERE table_name='logs' AND column_name='user_id'
     `);
-    if (hasToken.length === 0) {
-      await pool.query(`ALTER TABLE logs ADD COLUMN user_token TEXT NOT NULL DEFAULT 'joanne'`);
-      const { rows: pk } = await pool.query(`
-        SELECT constraint_name FROM information_schema.table_constraints
-        WHERE table_name='logs' AND constraint_type='PRIMARY KEY'
-      `);
-      if (pk.length > 0)
-        await pool.query(`ALTER TABLE logs DROP CONSTRAINT "${pk[0].constraint_name}"`);
-      await pool.query(`ALTER TABLE logs ADD PRIMARY KEY (user_token, date_key)`);
-      console.log('Migrated logs to multi-token schema (existing data → joanne)');
+    if (rows.length > 0) {
+      await pool.query('DROP TABLE IF EXISTS logs');
+      console.log('Dropped old user_id logs table');
     }
-  }
+  } catch(e) { console.error('user_id check error:', e.message); }
 
-  // Migrate app_profile to multi-token schema if needed
-  const { rows: profTable } = await pool.query(`
-    SELECT table_name FROM information_schema.tables WHERE table_name='app_profile'
-  `);
-  if (profTable.length > 0) {
-    const { rows: hasToken } = await pool.query(`
-      SELECT column_name FROM information_schema.columns
-      WHERE table_name='app_profile' AND column_name='user_token'
+  // 2. Migrate logs to multi-token schema
+  try {
+    const { rows: tbl } = await pool.query(`
+      SELECT table_name FROM information_schema.tables WHERE table_name='logs'
     `);
-    if (hasToken.length === 0) {
-      const { rows: existing } = await pool.query('SELECT * FROM app_profile WHERE id=1');
-      await pool.query('DROP TABLE app_profile');
-      await pool.query(`
-        CREATE TABLE app_profile (
-          user_token    TEXT PRIMARY KEY,
-          gender        TEXT,
-          age           INTEGER,
-          height_cm     REAL,
-          weight_kg     REAL,
-          target_kg     REAL,
-          activity      TEXT,
-          bmr           INTEGER,
-          tdee          INTEGER,
-          goal_cal      INTEGER,
-          macro_protein INTEGER,
-          macro_carb    INTEGER,
-          macro_fat     INTEGER
-        )
+    if (tbl.length > 0) {
+      const { rows: col } = await pool.query(`
+        SELECT column_name FROM information_schema.columns
+        WHERE table_name='logs' AND column_name='user_token'
       `);
-      if (existing.length > 0) {
-        const p = existing[0];
-        await pool.query(`
-          INSERT INTO app_profile
-            (user_token, gender, age, height_cm, weight_kg, target_kg, activity,
-             bmr, tdee, goal_cal, macro_protein, macro_carb, macro_fat)
-          VALUES ('joanne',$1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)
-        `, [p.gender, p.age, p.height_cm, p.weight_kg, p.target_kg, p.activity,
-            p.bmr, p.tdee, p.goal_cal, p.macro_protein, p.macro_carb, p.macro_fat]);
+      if (col.length === 0) {
+        await pool.query(`ALTER TABLE logs ADD COLUMN IF NOT EXISTS user_token TEXT NOT NULL DEFAULT 'joanne'`);
+        const { rows: pk } = await pool.query(`
+          SELECT constraint_name FROM information_schema.table_constraints
+          WHERE table_name='logs' AND constraint_type='PRIMARY KEY'
+        `);
+        if (pk.length > 0)
+          await pool.query(`ALTER TABLE logs DROP CONSTRAINT "${pk[0].constraint_name}"`);
+        await pool.query(`ALTER TABLE logs ADD PRIMARY KEY (user_token, date_key)`);
+        console.log('Migrated logs → multi-token');
       }
-      console.log('Migrated app_profile to multi-token schema (existing data → joanne)');
     }
+  } catch(e) {
+    console.error('logs migration failed, dropping for recreate:', e.message);
+    try { await pool.query('DROP TABLE IF EXISTS logs'); } catch(_) {}
   }
 
-  // Create tables fresh if they still don't exist
+  // 3. Migrate app_profile to multi-token schema
+  try {
+    const { rows: tbl } = await pool.query(`
+      SELECT table_name FROM information_schema.tables WHERE table_name='app_profile'
+    `);
+    if (tbl.length > 0) {
+      const { rows: col } = await pool.query(`
+        SELECT column_name FROM information_schema.columns
+        WHERE table_name='app_profile' AND column_name='user_token'
+      `);
+      if (col.length === 0) {
+        let existing = [];
+        try {
+          const r = await pool.query('SELECT * FROM app_profile LIMIT 1');
+          existing = r.rows;
+        } catch(_) {}
+        await pool.query('DROP TABLE IF EXISTS app_profile');
+        await pool.query(`
+          CREATE TABLE app_profile (
+            user_token    TEXT PRIMARY KEY,
+            gender        TEXT,
+            age           INTEGER,
+            height_cm     REAL,
+            weight_kg     REAL,
+            target_kg     REAL,
+            activity      TEXT,
+            bmr           INTEGER,
+            tdee          INTEGER,
+            goal_cal      INTEGER,
+            macro_protein INTEGER,
+            macro_carb    INTEGER,
+            macro_fat     INTEGER
+          )
+        `);
+        if (existing.length > 0) {
+          const p = existing[0];
+          await pool.query(`
+            INSERT INTO app_profile
+              (user_token, gender, age, height_cm, weight_kg, target_kg, activity,
+               bmr, tdee, goal_cal, macro_protein, macro_carb, macro_fat)
+            VALUES ('joanne',$1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)
+          `, [p.gender, p.age, p.height_cm, p.weight_kg, p.target_kg, p.activity,
+              p.bmr, p.tdee, p.goal_cal, p.macro_protein, p.macro_carb, p.macro_fat]);
+          console.log('Migrated app_profile → joanne');
+        }
+      }
+    }
+  } catch(e) {
+    console.error('app_profile migration failed, dropping for recreate:', e.message);
+    try { await pool.query('DROP TABLE IF EXISTS app_profile'); } catch(_) {}
+  }
+
+  // 4. Always ensure tables exist with correct schema
   await pool.query(`
     CREATE TABLE IF NOT EXISTS logs (
       user_token TEXT NOT NULL,
@@ -104,7 +120,6 @@ async function initDB() {
       PRIMARY KEY (user_token, date_key)
     )
   `);
-
   await pool.query(`
     CREATE TABLE IF NOT EXISTS app_profile (
       user_token    TEXT PRIMARY KEY,
@@ -122,8 +137,9 @@ async function initDB() {
       macro_fat     INTEGER
     )
   `);
+  console.log('DB ready');
 }
-initDB().catch(err => console.error('DB init error:', err));
+initDB().catch(err => console.error('DB init fatal:', err));
 
 // ── LOGS ─────────────────────────────────────────────────────────────────────
 app.get('/api/logs', async (req, res) => {
