@@ -141,6 +141,9 @@ async function initDB() {
 }
 initDB().catch(err => console.error('DB init fatal:', err));
 
+// ── HEALTH CHECK ─────────────────────────────────────────────────────────────
+app.get('/api/health', (req, res) => res.json({ ok: true }));
+
 // ── LOGS ─────────────────────────────────────────────────────────────────────
 app.get('/api/logs', async (req, res) => {
   const token = getToken(req);

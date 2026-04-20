@@ -1013,15 +1013,17 @@ async function saveProfile() {
         macro_protein: r.protein, macro_carb: r.carb, macro_fat: r.fat
       })
     });
-    if (!res.ok) throw new Error();
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      throw new Error(`HTTP ${res.status}${body.error ? ': ' + body.error : ''}`);
+    }
     applyProfile({ tdee:r.tdee, goal_cal:r.goalCal, weight_kg:weight, target_kg:target,
                    macro_protein:r.protein, macro_carb:r.carb, macro_fat:r.fat });
     document.getElementById('profileModal').style.display = 'none';
-    await migrateLocalStorage(); // upload any phone data now that profile is set
-    renderCharts(); renderRecordsGrid(); updateWeightSummary(); renderWeeklyReport();
-    loadDayLog();
+    try { await migrateLocalStorage(); } catch(_) {}
+    try { renderCharts(); renderRecordsGrid(); updateWeightSummary(); renderWeeklyReport(); loadDayLog(); } catch(_) {}
     toast('✓ 設定已儲存！', 'ok');
-  } catch(e) { err.textContent = '儲存失敗，請稍後再試'; }
+  } catch(e) { err.textContent = '儲存失敗：' + e.message; }
 }
 // Macro daily goals (g)
 let MACRO_STD   = {protein:100, carb:130, fat:43};   // overwritten by user profile
