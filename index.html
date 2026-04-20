@@ -1980,11 +1980,17 @@ async function migrateLocalStorage() {
 
 async function initApp() {
   const urlToken = new URLSearchParams(window.location.search).get('u') || '';
-  if (!urlToken) {
-    document.body.innerHTML = `<div style="display:flex;align-items:center;justify-content:center;height:100vh;font-family:'Noto Sans KR',sans-serif;flex-direction:column;gap:16px;background:#FDF5F0"><h2 style="color:#D4856A">⚠️ 缺少使用者代碼</h2><p style="color:#9A7A74">請使用個人專屬網址開啟，例如：<br><code style="background:#EDD9D0;padding:4px 8px;border-radius:6px">?u=yourname</code></p></div>`;
-    return;
+  if (urlToken) {
+    localStorage.setItem('caltrack_token', urlToken);
+    USER_TOKEN = urlToken;
+  } else {
+    const saved = localStorage.getItem('caltrack_token') || '';
+    if (!saved) {
+      document.body.innerHTML = `<div style="display:flex;align-items:center;justify-content:center;height:100vh;font-family:'Noto Sans KR',sans-serif;flex-direction:column;gap:16px;background:#FDF5F0"><h2 style="color:#D4856A">⚠️ 缺少使用者代碼</h2><p style="color:#9A7A74;text-align:center">請使用個人專屬網址開啟，例如：<br><code style="background:#EDD9D0;padding:4px 8px;border-radius:6px">?u=yourname</code></p></div>`;
+      return;
+    }
+    USER_TOKEN = saved;
   }
-  USER_TOKEN = urlToken;
 
   document.getElementById('logDate').value = todayStr();
   try {
