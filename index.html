@@ -488,7 +488,7 @@ svg.score-ring{width:80px;height:80px;transform:rotate(-90deg);}
 <section class="hero">
   <div class="hero-grid">
     <div>
-      <div class="hero-title"><div class="h1c">Joanne</div><div>Health<br><span class="h2c">Journey</span></div></div>
+      <div class="hero-title"><div class="h1c" id="heroName">Joanne</div><div>Health<br><span class="h2c">Journey</span></div></div>
       <p class="hero-sub">減重目標 70 → 60 公斤<br>年底達標計畫 · 每日飲食 × 運動追蹤<br>體脂 35.4% · 內臟脂肪 9 · BMR 1411</p>
       <div class="hero-stats">
         <div class="hero-stat"><div class="hero-stat-val hpink">1300</div><div class="hero-stat-label">日攝取目標</div></div>
@@ -1980,6 +1980,41 @@ async function migrateLocalStorage() {
   renderCharts(); renderRecordsGrid(); updateWeightSummary(); renderWeeklyReport();
 }
 
+const USER_THEMES = {
+  jerry: {
+    name: 'Jerry',
+    title: 'JERRY — Health Log',
+    vars: {
+      '--bg':           '#F0F4F8',
+      '--black':        '#1A2B3C',
+      '--pink':         '#2D6A9F',
+      '--pink-light':   '#D0E4F5',
+      '--mint':         '#3A8A6A',
+      '--mint-light':   '#C5E5D8',
+      '--yellow':       '#5B7FA6',
+      '--yellow-light': '#D8E5F0',
+      '--purple':       '#4A6B8A',
+      '--purple-light': '#D2E2F0',
+      '--warm':         '#5B7FA6',
+      '--border':       '#C8D5E2',
+      '--text':         '#1C2B3A',
+      '--muted':        '#6B7D8E',
+      '--surface':      '#E8EFF5',
+      '--ink-mid':      '#2D4A6B',
+    }
+  }
+};
+
+function applyUserTheme(token) {
+  const theme = USER_THEMES[token];
+  if (!theme) return;
+  const r = document.documentElement.style;
+  Object.entries(theme.vars).forEach(([k, v]) => r.setProperty(k, v));
+  const el = document.getElementById('heroName');
+  if (el) el.textContent = theme.name;
+  document.title = theme.title;
+}
+
 async function initApp() {
   const urlToken = new URLSearchParams(window.location.search).get('u') || '';
   if (urlToken) {
@@ -1993,6 +2028,7 @@ async function initApp() {
     }
     USER_TOKEN = saved;
   }
+  applyUserTheme(USER_TOKEN);
 
   document.getElementById('logDate').value = todayStr();
   try {
