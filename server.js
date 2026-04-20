@@ -13,29 +13,101 @@ const pool = new Pool({
 app.use(express.json());
 app.use(express.static(path.join(__dirname)));
 
+function getToken(req) {
+  return (req.query.token || '').trim() || null;
+}
+
 async function initDB() {
-  // If logs table has user_id column, drop it (revert multi-user schema)
-  const { rows } = await pool.query(`
+  // Drop old user_id-based schema if it exists
+  const { rows: hasUserId } = await pool.query(`
     SELECT column_name FROM information_schema.columns
-    WHERE table_name = 'logs' AND column_name = 'user_id'
+    WHERE table_name='logs' AND column_name='user_id'
   `);
-  if (rows.length > 0) {
+  if (hasUserId.length > 0) {
     await pool.query('DROP TABLE IF EXISTS logs');
-    console.log('Reverted to single-user logs table');
+    console.log('Dropped old user_id logs table');
   }
 
+  // Migrate logs to multi-token schema if needed
+  const { rows: logsTable } = await pool.query(`
+    SELECT table_name FROM information_schema.tables WHERE table_name='logs'
+  `);
+  if (logsTable.length > 0) {
+    const { rows: hasToken } = await pool.query(`
+      SELECT column_name FROM information_schema.columns
+      WHERE table_name='logs' AND column_name='user_token'
+    `);
+    if (hasToken.length === 0) {
+      await pool.query(`ALTER TABLE logs ADD COLUMN user_token TEXT NOT NULL DEFAULT 'joanne'`);
+      const { rows: pk } = await pool.query(`
+        SELECT constraint_name FROM information_schema.table_constraints
+        WHERE table_name='logs' AND constraint_type='PRIMARY KEY'
+      `);
+      if (pk.length > 0)
+        await pool.query(`ALTER TABLE logs DROP CONSTRAINT "${pk[0].constraint_name}"`);
+      await pool.query(`ALTER TABLE logs ADD PRIMARY KEY (user_token, date_key)`);
+      console.log('Migrated logs to multi-token schema (existing data → joanne)');
+    }
+  }
+
+  // Migrate app_profile to multi-token schema if needed
+  const { rows: profTable } = await pool.query(`
+    SELECT table_name FROM information_schema.tables WHERE table_name='app_profile'
+  `);
+  if (profTable.length > 0) {
+    const { rows: hasToken } = await pool.query(`
+      SELECT column_name FROM information_schema.columns
+      WHERE table_name='app_profile' AND column_name='user_token'
+    `);
+    if (hasToken.length === 0) {
+      const { rows: existing } = await pool.query('SELECT * FROM app_profile WHERE id=1');
+      await pool.query('DROP TABLE app_profile');
+      await pool.query(`
+        CREATE TABLE app_profile (
+          user_token    TEXT PRIMARY KEY,
+          gender        TEXT,
+          age           INTEGER,
+          height_cm     REAL,
+          weight_kg     REAL,
+          target_kg     REAL,
+          activity      TEXT,
+          bmr           INTEGER,
+          tdee          INTEGER,
+          goal_cal      INTEGER,
+          macro_protein INTEGER,
+          macro_carb    INTEGER,
+          macro_fat     INTEGER
+        )
+      `);
+      if (existing.length > 0) {
+        const p = existing[0];
+        await pool.query(`
+          INSERT INTO app_profile
+            (user_token, gender, age, height_cm, weight_kg, target_kg, activity,
+             bmr, tdee, goal_cal, macro_protein, macro_carb, macro_fat)
+          VALUES ('joanne',$1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)
+        `, [p.gender, p.age, p.height_cm, p.weight_kg, p.target_kg, p.activity,
+            p.bmr, p.tdee, p.goal_cal, p.macro_protein, p.macro_carb, p.macro_fat]);
+      }
+      console.log('Migrated app_profile to multi-token schema (existing data → joanne)');
+    }
+  }
+
+  // Create tables fresh if they still don't exist
   await pool.query(`
     CREATE TABLE IF NOT EXISTS logs (
-      date_key  TEXT PRIMARY KEY,
-      foods     JSONB NOT NULL DEFAULT '[]',
-      exercises JSONB NOT NULL DEFAULT '[]',
-      weight    REAL
+      user_token TEXT NOT NULL,
+      date_key   TEXT NOT NULL,
+      foods      JSONB NOT NULL DEFAULT '[]',
+      exercises  JSONB NOT NULL DEFAULT '[]',
+      weight     REAL,
+      PRIMARY KEY (user_token, date_key)
     )
   `);
 
   await pool.query(`
     CREATE TABLE IF NOT EXISTS app_profile (
-      id            INTEGER PRIMARY KEY DEFAULT 1,
+      user_token    TEXT PRIMARY KEY,
       gender        TEXT,
       age           INTEGER,
       height_cm     REAL,
@@ -55,8 +127,12 @@ initDB().catch(err => console.error('DB init error:', err));
 
 // ── LOGS ─────────────────────────────────────────────────────────────────────
 app.get('/api/logs', async (req, res) => {
+  const token = getToken(req);
+  if (!token) return res.status(400).json({ error: 'Missing token' });
   try {
-    const { rows } = await pool.query('SELECT * FROM logs ORDER BY date_key');
+    const { rows } = await pool.query(
+      'SELECT * FROM logs WHERE user_token=$1 ORDER BY date_key', [token]
+    );
     res.json(rows);
   } catch (e) { console.error(e); res.status(500).json({ error: 'DB error' }); }
 });
@@ -65,51 +141,63 @@ app.post('/api/logs/:date', async (req, res) => {
   const { date } = req.params;
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date))
     return res.status(400).json({ error: 'Invalid date' });
+  const token = getToken(req);
+  if (!token) return res.status(400).json({ error: 'Missing token' });
   const { foods = [], exercises = [], weight = null } = req.body;
   try {
     await pool.query(`
-      INSERT INTO logs (date_key, foods, exercises, weight)
-      VALUES ($1, $2, $3, $4)
-      ON CONFLICT (date_key) DO UPDATE SET
+      INSERT INTO logs (user_token, date_key, foods, exercises, weight)
+      VALUES ($1, $2, $3, $4, $5)
+      ON CONFLICT (user_token, date_key) DO UPDATE SET
         foods     = EXCLUDED.foods,
         exercises = EXCLUDED.exercises,
         weight    = EXCLUDED.weight
-    `, [date, JSON.stringify(foods), JSON.stringify(exercises), weight || null]);
+    `, [token, date, JSON.stringify(foods), JSON.stringify(exercises), weight || null]);
     res.json({ ok: true });
   } catch (e) { console.error(e); res.status(500).json({ error: 'DB error' }); }
 });
 
 app.delete('/api/logs/:date', async (req, res) => {
+  const token = getToken(req);
+  if (!token) return res.status(400).json({ error: 'Missing token' });
   try {
-    await pool.query('DELETE FROM logs WHERE date_key = $1', [req.params.date]);
+    await pool.query(
+      'DELETE FROM logs WHERE user_token=$1 AND date_key=$2', [token, req.params.date]
+    );
     res.json({ ok: true });
   } catch (e) { console.error(e); res.status(500).json({ error: 'DB error' }); }
 });
 
-// ── PROFILE (single user) ─────────────────────────────────────────────────────
+// ── PROFILE ───────────────────────────────────────────────────────────────────
 app.get('/api/profile', async (req, res) => {
+  const token = getToken(req);
+  if (!token) return res.status(400).json({ error: 'Missing token' });
   try {
-    const { rows } = await pool.query('SELECT * FROM app_profile WHERE id = 1');
+    const { rows } = await pool.query(
+      'SELECT * FROM app_profile WHERE user_token=$1', [token]
+    );
     res.json(rows[0] || null);
   } catch (e) { console.error(e); res.status(500).json({ error: 'DB error' }); }
 });
 
 app.post('/api/profile', async (req, res) => {
+  const token = getToken(req);
+  if (!token) return res.status(400).json({ error: 'Missing token' });
   const { gender, age, height_cm, weight_kg, target_kg, activity,
           bmr, tdee, goal_cal, macro_protein, macro_carb, macro_fat } = req.body;
   try {
     await pool.query(`
       INSERT INTO app_profile
-        (id, gender, age, height_cm, weight_kg, target_kg, activity,
+        (user_token, gender, age, height_cm, weight_kg, target_kg, activity,
          bmr, tdee, goal_cal, macro_protein, macro_carb, macro_fat)
-      VALUES (1,$1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)
-      ON CONFLICT (id) DO UPDATE SET
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)
+      ON CONFLICT (user_token) DO UPDATE SET
         gender=EXCLUDED.gender, age=EXCLUDED.age, height_cm=EXCLUDED.height_cm,
         weight_kg=EXCLUDED.weight_kg, target_kg=EXCLUDED.target_kg,
         activity=EXCLUDED.activity, bmr=EXCLUDED.bmr, tdee=EXCLUDED.tdee,
         goal_cal=EXCLUDED.goal_cal, macro_protein=EXCLUDED.macro_protein,
         macro_carb=EXCLUDED.macro_carb, macro_fat=EXCLUDED.macro_fat
-    `, [gender, age, height_cm, weight_kg, target_kg, activity,
+    `, [token, gender, age, height_cm, weight_kg, target_kg, activity,
         bmr, tdee, goal_cal, macro_protein, macro_carb, macro_fat]);
     res.json({ ok: true });
   } catch (e) { console.error(e); res.status(500).json({ error: 'DB error' }); }
