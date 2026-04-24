@@ -1623,8 +1623,16 @@ async function saveLog() {
   const dateVal = document.getElementById('logDate').value;
   const w = parseFloat(document.getElementById('todayWeight').value);
   const weight = (!isNaN(w) && w > 0) ? w : null;
+  // Always back up to localStorage before sending to server
+  if (logFoods.length || logExs.length) {
+    try {
+      localStorage.setItem('jlog_' + dateVal, JSON.stringify(logFoods));
+      localStorage.setItem('jlog_' + dateVal + '_ex', JSON.stringify(logExs));
+      if (weight) localStorage.setItem('jlog_' + dateVal + '_w', String(weight));
+    } catch(_) {}
+  }
   try {
-    const res = await fetch(`/api/logs/${dateVal}`, {
+    const res = await fetch(`/api/logs/${dateVal}?token=${USER_TOKEN}`, {
       method: 'POST',
       headers: {'Content-Type':'application/json'},
       body: JSON.stringify({ foods: logFoods, exercises: logExs, weight })
@@ -1633,7 +1641,7 @@ async function saveLog() {
     dbLogs[dateVal] = { date_key: dateVal, foods: logFoods, exercises: logExs, weight };
     renderRecordsGrid(); renderCharts(); updateWeightSummary(); renderWeeklyReport();
     toast('✓ 記錄已儲存！', 'ok');
-  } catch(e) { toast('儲存失敗，請檢查網路 ⚠️'); }
+  } catch(e) { toast('⚠️ 雲端儲存失敗，已備份至本機，重新整理後會自動上傳'); }
 }
 function clearLog(){if(!confirm('確定要清除今日記錄嗎？'))return;logFoods=[];logExs=[];renderLog();toast('已清除今日記錄');}
 function addFromCalc(){
